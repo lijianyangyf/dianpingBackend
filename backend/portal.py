@@ -55,8 +55,11 @@ def api_check_token():
         if response_data.get("code") != 200:
             # 业务逻辑返回 999 (例如数据库中用户已不存在)
             http_status_code = 401 # 401 Unauthorized
-            
-        return jsonify(response_data), http_status_code
+        new_token=response_data.get("data").get("token")
+        resp = jsonify(response_data.get("code"))
+        if new_token:
+            resp.set_cookie("token", new_token)
+        return resp, http_status_code
     
     except Exception as e:
         # 捕获 user.checkToken 中抛出的异常

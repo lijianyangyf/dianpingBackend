@@ -1,0 +1,449 @@
+[
+  {
+    "apiID": "1",
+    "apiName": "登陆状态验证",
+    "apiUrl": "/api/checkToken",
+    "apiType": "GET",
+    "needToken": "True",
+    "InputStructure": {
+      "token": "string"
+    },
+    "OutputStructure": {
+      "Success": {
+        "code": "200 (int)",
+        "data": {
+          "token": "string"
+        }
+      },
+      "Failure": {
+        "code": "998 (int)"
+      }
+    }
+  },
+  {
+    "apiID": "2",
+    "apiName": "登陆验证",
+    "apiUrl": "/api/user/login",
+    "apiType": "POST",
+    "needToken": "False",
+    "InputStructure": {
+      "userName": "string",
+      "password": "string",
+      "token": "string"
+    },
+    "OutputStructure": {
+      "Success": {
+        "code": "200 (int)",
+        "data": {
+          "token": "string"
+        }
+      },
+      "Failure": {
+        "code": "999 (int)",
+        "msg": "用户不存在|密码错误 (string)"
+      }
+    }
+  },
+  {
+    "apiID": "3",
+    "apiName": "注册",
+    "apiUrl": "/api/user/signUp",
+    "apiType": "POST",
+    "needToken": "False",
+    "InputStructure": {
+      "userName": "string",
+      "nickName": "string",
+      "password": "string",
+      "token": "string"
+    },
+    "OutputStructure": {
+      "Success": {
+        "code": "200 (int)"
+      },
+      "Failure": {
+        "code": "999 (int)",
+        "msg": "用户名已存在 (string)"
+      }
+    }
+  },
+  {
+    "apiID": "4",
+    "apiName": "用户信息修改",
+    "apiUrl": "/api/user/editInfo",
+    "apiType": "POST",
+    "needToken": "True",
+    "InputStructure": {
+      "nickName": "string (mutipart/formdata)",
+      "avatar": "file (mutipart/formdata)",
+      "token": "string (mutipart/formdata)"
+    },
+    "OutputStructure": {
+      "Success": {
+        "code": "200 (int)",
+        "data": {
+          "token": "string"
+        }
+      },
+      "Failure": {
+        "code": "999 (int)",
+        "msg": "后端可自由决定 (string)"
+      }
+    }
+  },
+  {
+    "apiID": "5",
+    "apiName": "用户密码修改",
+    "apiUrl": "/api/user/editPassword",
+    "apiType": "POST",
+    "needToken": "True",
+    "InputStructure": {
+      "newPassword": "string (mutipart/formdata)",
+      "token": "string (mutipart/formdata)"
+    },
+    "OutputStructure": {
+      "Success": {
+        "code": "200 (int)",
+        "data": {
+          "token": "string"
+        }
+      },
+      "Failure": {
+        "code": "999 (int)",
+        "msg": "后端可自由决定 (string)"
+      }
+    }
+  },
+  {
+    "apiID": "6",
+    "apiName": "获取用户信息",
+    "apiUrl": "/api/user/getInfo",
+    "apiType": "GET",
+    "needToken": "True",
+    "InputStructure": {
+      "token": "string"
+    },
+    "OutputStructure": {
+      "Success": {
+        "code": "200 (int)",
+        "data": {
+          "userName": "string",
+          "nickName": "string",
+          "avatarUrl": "string",
+          "token": "string"
+        }
+      },
+      "Failure": {
+        "code": "999 (int)",
+        "msg": "后端可自由决定 (string)"
+      }
+    }
+  },
+  {
+    "apiID": "7",
+    "apiName": "获取“我的评论”",
+    "apiUrl": "/api/user/getCommentList",
+    "apiType": "GET",
+    "needToken": "True",
+    "InputStructure": {
+      "numPerPage": "string (query)",
+      "pageIndex": "string (query)",
+      "token": "string (query)"
+    },
+    "OutputStructure": {
+      "Success": {
+        "code": "200 (int)",
+        "data": {
+          "comments": [
+            {
+              "ID": "int",
+              "stallName": "string",
+              "canteent": "string",
+              "dateTime": "string",
+              "rating": "float",
+              "like": "int",
+              "content": "string",
+              "pictrue1Url": "string",
+              "picture2Url": "string",
+              "picture3Url": "string"
+            }
+          ],
+          "totalPageNum": "int",
+          "pageIndex": "int",
+          "token": "string"
+        }
+      },
+      "Failure": {
+        "code": "999 (int)",
+        "msg": "后端可自由决定 (string)"
+      }
+    }
+  },
+  {
+    "apiID": "8",
+    "apiName": "删除“我的评论”",
+    "apiUrl": "/api/user/deleteComment",
+    "apiType": "POST",
+    "needToken": "True",
+    "InputStructure": {
+      "commentID": "string (query)",
+      "token": "string (query)"
+    },
+    "OutputStructure": {
+      "Success": {
+        "code": "200 (int)",
+        "data": {
+          "token": "string"
+        }
+      },
+      "Failure": {
+        "code": "999 (int)",
+        "msg": "后端可自由决定 (string)"
+      }
+    }
+  },
+  {
+    "apiID": "9",
+    "apiName": "获取档口列表",
+    "apiUrl": "/api/food/getStallList",
+    "apiType": "GET",
+    "needToken": "True",
+    "InputStructure": {
+      "type": "string (query)",
+      "canteen": "string (query)",
+      "collation": "string (query)",
+      "numPerPage": "string (query)",
+      "pageIndex": "string (query)",
+      "token": "string (query)"
+    },
+    "OutputStructure": {
+      "Success": {
+        "code": "200 (int)",
+        "data": {
+          "stalls": [
+            {
+              "ID": "int",
+              "name": "string",
+              "rating": "float",
+              "meanPrice": "float",
+              "canteent": "string",
+              "signatureDish": "string",
+              "pictureUrl": "string"
+            }
+          ],
+          "totalPageNum": "int",
+          "pageIndex": "int",
+          "token": "string"
+        }
+      },
+      "Failure": {
+        "code": "999 (int)",
+        "msg": "后端可自由决定 (string)"
+      }
+    }
+  },
+  {
+    "apiID": "10",
+    "apiName": "获取档口的详细信息",
+    "apiUrl": "/api/food/getStallInfo",
+    "apiType": "GET",
+    "needToken": "True",
+    "InputStructure": {
+      "stallID": "string (query)",
+      "token": "string (query)"
+    },
+    "OutputStructure": {
+      "Success": {
+        "code": "200 (int)",
+        "data": {
+          "ID": "int",
+          "name": "string",
+          "rating": "float",
+          "meanPrice": "float",
+          "introduction": "string",
+          "canteent": "string",
+          "signatureDish": "string",
+          "pictureUrl": "string",
+          "dishList": [
+            {
+              "ID": "int",
+              "name": "string",
+              "price": "float",
+              "rating": "float",
+              "pictrueUrl": "string"
+            }
+          ],
+          "commentList": [
+            {
+              "ID": "int",
+              "reviewerName": "string",
+              "avatarUrl": "string",
+              "dateTime": "string",
+              "rating": "float",
+              "like": "int",
+              "content": "string",
+              "pictrue1Url": "string",
+              "picture2Url": "string",
+              "picture3Url": "string"
+            }
+          ],
+          "token": "string"
+        }
+      },
+      "Failure": {
+        "code": "999 (int)",
+        "msg": "后端可自由决定 (string)"
+      }
+    }
+  },
+  {
+    "apiID": "11",
+    "apiName": "获取档口的全部评论",
+    "apiUrl": "/api/food/getStallCommentList",
+    "apiType": "GET",
+    "needToken": "True",
+    "InputStructure": {
+      "stallID": "string (query)",
+      "numPerPage": "string (query)",
+      "pageIndex": "string (query)",
+      "token": "string (query)"
+    },
+    "OutputStructure": {
+      "Success": {
+        "code": "200 (int)",
+        "data": {
+          "commentList": [
+            {
+              "ID": "int",
+              "reviewerName": "string",
+              "avatarUrl": "string",
+              "dateTime": "string",
+              "rating": "float",
+              "like": "int",
+              "content": "string",
+              "pictrue1Url": "string",
+              "picture2Url": "string",
+              "picture3Url": "string"
+            }
+          ],
+          "totalPageNum": "int",
+          "pageIndex": "int",
+          "token": "string"
+        }
+      },
+      "Failure": {
+        "code": "999 (int)",
+        "msg": "后端可自由决定 (string)"
+      }
+    }
+  },
+  {
+    "apiID": "12",
+    "apiName": "发表对档口的评论",
+    "apiUrl": "/api/food/createStallComment",
+    "apiType": "POST",
+    "needToken": "True",
+    "InputStructure": {
+      "stallID": "int",
+      "rating": "int",
+      "content": "string",
+      "pictrue1Url": "string",
+      "picture2Url": "string",
+      "picture3Url": "string",
+      "token": "string"
+    },
+    "OutputStructure": {
+      "Success": {
+        "code": "200 (int)",
+        "data": {
+          "token": "string"
+        }
+      },
+      "Failure": {
+        "code": "999 (int)",
+        "msg": "后端可自由决定 (string)"
+      }
+    }
+  },
+  {
+    "apiID": "13",
+    "apiName": "对评论进行评价",
+    "apiUrl": "/api/food/evaluationComment",
+    "apiType": "POST",
+    "needToken": "True",
+    "InputStructure": {
+      "commentID": "int",
+      "newEvaluation": "string ('like' or 'none')",
+      "token": "string"
+    },
+    "OutputStructure": {
+      "Success": {
+        "code": "200 (int)",
+        "data": {
+          "token": "string"
+        }
+      },
+      "Failure": {
+        "code": "999 (int)",
+        "msg": "后端可自由决定 (string)"
+      }
+    }
+  },
+  {
+    "apiID": "14",
+    "apiName": "获取全部菜品列表",
+    "apiUrl": "/api/food/getStallDishList",
+    "apiType": "GET",
+    "needToken": "True",
+    "InputStructure": {
+      "stallID": "string (query)",
+      "token": "string (query)"
+    },
+    "OutputStructure": {
+      "Success": {
+        "code": "200 (int)",
+        "data": {
+          "dishList": [
+            {
+              "ID": "int",
+              "name": "string",
+              "price": "float",
+              "like": "int",
+              "bad": "int",
+              "pictureUrl": "string",
+              "evaluation": "string ('like', 'bad', or 'none')"
+            }
+          ],
+          "token": "string"
+        }
+      },
+      "Failure": {
+        "code": "999 (int)",
+        "msg": "后端可自由决定 (string)"
+      }
+    }
+  },
+  {
+    "apiID": "15",
+    "apiName": "更新菜品的评价状态",
+    "apiUrl": "/api/food/evaluateDish",
+    "apiType": "POST",
+    "needToken": "True",
+    "InputStructure": {
+      "dishID": "int",
+      "newEvaluation": "string ('like', 'bad', or 'none')",
+      "token": "string"
+    },
+    "OutputStructure": {
+      "Success": {
+        "code": "200 (int)",
+        "data": {
+          "token": "string"
+        }
+      },
+      "Failure": {
+        "code": "999 (int)",
+        "msg": "后端可自由决定 (string)"
+      }
+    }
+  }
+]

@@ -8,6 +8,7 @@
 """
 
 import os
+import inspect
 from flask import Flask, send_from_directory, jsonify,request
 from api import user
 # === 路径设置（相对 backend/ 目录） ===
@@ -30,7 +31,7 @@ def health():
     """简单存活探针，便于容器/负载均衡检查。"""
     return jsonify(code=200, msg="ok")
 
-# === 验证 ===
+# === 验证 ===（1）
 @app.get("/api/checkToken")
 def api_check_token():
     """
@@ -67,7 +68,7 @@ def api_check_token():
         print(f"Error calling user.checkToken: {e}") 
         return jsonify(code=999, msg="Token无效或已过期"), 401
 
-# === 登录 ===
+# === 登录 === （2）
 @app.post("/api/user/login")  # 使用 app.post 来明确指定处理 POST 请求
 def api_user_login():
     """
@@ -109,6 +110,368 @@ def api_user_login():
         print(f"Error calling user.login: {e}") 
         return jsonify(code=999, msg="服务器内部错误"), 500
 # === 按 Task 文档列出的前端路由逐一注册（查询字符串会被浏览器保留，无需后端感知） ===
+
+# === 用户注册 === （3）
+@app.post("/api/user/signUp")
+def api_user_signUp():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    #提取三个参数
+    userName = data.get("userName")
+    nickName = data.get("nickName")
+    password = data.get("password")
+    #校验入参
+    if not userName or not nickName or not password:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = user.signUp(userName, nickName, password)
+        http_status_code = 200 
+        if response_data.get("code") != 200:
+            http_status_code = 401 
+            
+        return jsonify(response_data), http_status_code
+    
+    except Exception as e:
+        print(f"Error calling user.login: {e}") 
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 用户信息修改 === （4）
+@app.post("/api/user/editInfo")
+def api_user_editInfo():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token = request.cookies.get("token")
+    if not token:
+        return jsonify(code=999, msg="未检测到Token (Cookie 或 body.token)"), 401
+    # 提取参数（支持只更新一个字段）
+    nickName = data.get("nickName")
+    avatar = data.get("avatar")
+    #校验入参
+    if not nickName or not avatar:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:#使用user.editInfo函数
+        response_data = user.editInfo(nickName,avatar,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling user.editInfo: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 用户密码修改 === （5）
+@app.post("/api/user/editPassword")
+def api_user_editPassword():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token = request.cookies.get("token")
+    if not token:
+        return jsonify(code=999, msg="未检测到Token"), 401
+    #提取新密码
+    newPassword = data.get("newPassword")
+    if not newPassword:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = user.editPassword(newPassword, token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        #更新token
+        new_token = None
+        if isinstance(response_data.get("data"), dict):
+            new_token = response_data.get("data").get("token")
+        if new_token:
+            resp = jsonify(response_data)
+            resp.set_cookie("token", new_token)
+
+            return resp, http_status_code
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling user.editPassword: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 用户信息获取 === （6）
+@app.get("/api/user/getInfo")
+def api_user_getInfo():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token = request.cookies.get("token")
+    if not token:
+        return jsonify(code=999, msg="未检测到Token"), 401
+    try:
+        response_data = user.getInfo(token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling user.getInfo: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 用户评论获取 ===（7）
+@app.get("/api/user/getCommentList")
+def api_user_getCommentList():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token = request.cookies.get("token")
+    if not token:
+        return jsonify(code=999, msg="未检测到Token"), 401
+    #提取参数
+    numPerPage = data.get("numPerPage")
+    pageIndex = data.get("pageIndex")
+    if not numPerPage or not pageIndex:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = user.getCommentList(numPerPage,pageIndex,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling user.getCommentList: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 用户评论删除 ===（8）
+@app.post("/api/user/deleteComment")
+def api_user_deleteComment():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token = request.cookies.get("token")
+    if not token:
+        return jsonify(code=999, msg="未检测到Token"), 401
+    #提取参数
+    commentID = data.get("commentID")
+    if not commentID:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = user.deleteComment(commentID,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling user.deleteComment: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 档口列表获取 === (9)
+@app.get("/api/food/getStallList")
+def app_food_getStallList():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token = request.cookies.get("token")
+    if not token:
+        return jsonify(code=999, msg="未检测到Token"), 401
+    #提取参数
+    type = data.get("type")
+    canteen = data.get("canteen")
+    collation = data.get("collation")
+    numPerPage = data.get("numPerPage")
+    pageIndex = data.get("pageIndex")
+    if not type or not canteen or not collation or not numPerPage or not pageIndex:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = user.getStallList(type, canteen, collation, numPerPage, pageIndex,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling food.getStallList: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 档口详细信息获取 === (10)
+@app.get("/api/food/getStallInfo")
+def app_food_getStallInfo():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token = request.cookies.get("token")
+    if not token:
+        return jsonify(code=999, msg="未检测到Token"), 401
+    #提取参数
+    stallID = data.get("stallID")
+    if not stallID:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = user.getStallInfo(stallID,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling food.getStallInfo: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 档口全部评论 === (11)
+@app.get("/api/food/getStallCommentList")
+def app_food_getStallCommentList():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token = request.cookies.get("token")
+    if not token:
+        return jsonify(code=999, msg="未检测到Token"), 401
+    #提取参数
+    stallID = data.get("stallID")
+    numPerPage = data.get("numPerPage")
+    pageIndex = data.get("pageIndex")
+    if not stallID or not numPerPage or not pageIndex:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = user.getStallCommentList(stallID,numPerPage,pageIndex,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling food.getStallCommentList: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 发表档口评论 === (12)
+@app.post("/api/food/createStallComment")
+def app_food_createStallComment():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token = request.cookies.get("token")
+    if not token:
+        return jsonify(code=999, msg="未检测到Token"), 401
+    #提取参数
+    stallID = data.get("stallID")
+    rating = data.get("rating")
+    content = data.get("content")
+    pictrue1Url = data.get("pictrue1Url")
+    picture2Url = data.get("picture2Url")
+    picture3Url = data.get("picture3Url")
+    if not stallID or not rating or not content or not pictrue1Url or not picture2Url or not picture3Url:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = user.createStallComment(stallID, rating, content, pictrue1Url, picture2Url, picture3Url, token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling food.getStallCommentList: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 评价评论 === (13)
+@app.post("/api/food/evaluationComment")
+def app_food_evaluationComment():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token = request.cookies.get("token")
+    if not token:
+        return jsonify(code=999, msg="未检测到Token"), 401
+    #提取参数
+    commentID = data.get("commentID")
+    newEvaluation = data.get("newEvaluation")
+    if not commentID or not newEvaluation:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = user.evaluationComment(commentID,newEvaluation,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling food.evaluationComment: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 菜品列表获取 === (14)
+@app.get("/api/food/getStallDishList")
+def app_food_getStallDishList():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token = request.cookies.get("token")
+    if not token:
+        return jsonify(code=999, msg="未检测到Token"), 401
+    #提取参数
+    stallID = data.get("stallID")
+    if not stallID:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = user.getStallDishList(stallID,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling food.evaluationComment: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 菜品评论更改 === (15)
+@app.post("/api/food/evaluateDish")
+def app_food_evaluateDish():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token = request.cookies.get("token")
+    if not token:
+        return jsonify(code=999, msg="未检测到Token"), 401
+    #提取参数
+    dishID = data.get("dishID")
+    newEvaluation = data.get("newEvaluation")
+    if not dishID or not newEvaluation:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = user.getCommentList(dishID,newEvaluation,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling food.evaluateDish: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
 SPA_PATHS = [
     "/",                            # 根路径，直接交给前端路由决定去向（通常跳登录）
     "/home",

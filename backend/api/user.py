@@ -1,9 +1,12 @@
 import Database
 import jwt
 import time
+import os
 secret_key = "salt256"
 algorithm = "HS256"
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+IMGREPO_DIR = os.path.normpath(os.path.join(BASE_DIR, "../../imgRepo"))
 """ test:
 Invoke-RestMethod -Uri http://127.0.0.1:8000/api/checkToken -Method Get -Body '{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyTmFtZSI6ImxqeSIsInBhc3N3b3JkIjoiMTIzNDU2IiwiZXhwIjoxNzYyOTMzODIzLjcwODg3ODV9.bzDpOP5azzsaj5T61XSqYXCm3N1mEOqyvJkN-6IDgo8"}' -ContentType "application/json"
 """
@@ -108,7 +111,7 @@ def signUp(userName, nickName, password):
 Invoke-RestMethod -Uri 'http://127.0.0.1:8000/api/user/editInfo'  -Method POST  -Body '{"nickName":"NewNick","avatarUrl":"http://example.com/csb.png","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyTmFtZSI6ImxqeSIsInBhc3N3b3JkIjoiMTIzNDU2IiwiZXhwIjoxNzYyOTMzODIzLjcwODg3ODV9.bzDpOP5azzsaj5T61XSqYXCm3N1mEOqyvJkN-6IDgo8"}' -ContentType 'application/json' -Verbose
 """
 #$headers = @{ "Cookie" = "token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyTmFtZSI6ImxqeSIsInBhc3N3b3JkIjoiMTIzNDU2IiwiZXhwIjoxNzYyODU0Njk2LjUwOTY1NX0.H7AchVyuGZCYi6oRiPQx7QHA6uO7irJKegjsXEhkVI0" }; Invoke-RestMethod -Uri http://127.0.0.1:8000/api/user/editInfo -Method Post -Body '{"nickName":"NewNick","avatarUrl":"http://example.com/avatar.png"}' -Headers $headers -ContentType 'application/json' -Verbose
-def editInfo(nickName, avatarUrl, token):
+def editInfo(nickName, avatar, token):
     db = Database.Database()
     response = {}
     try:
@@ -118,7 +121,11 @@ def editInfo(nickName, avatarUrl, token):
         # 解码 token 获取用户名
         payload = jwt.decode(token, secret_key, algorithms=[algorithm])
         userName = payload.get("userName")
-        password = payload.get("password")    
+        password = payload.get("password")
+        if avatar:
+            saveUrl = os.path.join(IMGREPO_DIR, f"{userName}_avatar.png")
+            avatar.save(saveUrl)
+            avatarUrl = f"/imgRepo/{userName}_avatar.png"
         db.connect()
         response = db.execute_query(
             "update User set nickName = %(nickName)s, avatarUrl = %(avatarUrl)s where userName = %(userName)s",
@@ -178,10 +185,10 @@ def editPassword(newPassword, token):
     except jwt.ExpiredSignatureError:
         return {"code": 999, "msg": "Token 已过期"}
     except jwt.InvalidTokenError as e:
-        print(f"editInfo: Token 无效: {e}")
+        print(f"editPassword: Token 无效: {e}")
         return {"code": 999, "msg": "Token 无效"}
     except Exception as e:
-        print(f"editInfo: 其他错误: {e}")
+        print(f"editPassword: 其他错误: {e}")
         return {"code": 999, "msg": f"服务器错误: {str(e)}"}
     if response is not None:
         new_payload = {
@@ -225,10 +232,10 @@ def getInfo(token):
     except jwt.ExpiredSignatureError:
         return {"code": 999, "msg": "Token 已过期"}
     except jwt.InvalidTokenError as e:
-        print(f"editInfo: Token 无效: {e}")
+        print(f"getInfo: Token 无效: {e}")
         return {"code": 999, "msg": "Token 无效"}
     except Exception as e:
-        print(f"editInfo: 其他错误: {e}")
+        print(f"getInfo: 其他错误: {e}")
         return {"code": 999, "msg": f"服务器错误: {str(e)}"}
     if response is not None:
         payload = {
@@ -292,10 +299,10 @@ def getCommentList(numPerPage, pageIndex, token):
     except jwt.ExpiredSignatureError:
         return {"code": 999, "msg": "Token 已过期"}
     except jwt.InvalidTokenError as e:
-        print(f"editInfo: Token 无效: {e}")
+        print(f"getCommentList: Token 无效: {e}")
         return {"code": 999, "msg": "Token 无效"}
     except Exception as e:
-        print(f"editInfo: 其他错误: {e}")
+        print(f"getCommentList: 其他错误: {e}")
         return {"code": 999, "msg": f"服务器错误: {str(e)}"}
     if response is not None:
         payload = {
@@ -380,10 +387,10 @@ def deleteComment(commentID, token):
     except jwt.ExpiredSignatureError:
         return {"code": 999, "msg": "Token 已过期"}
     except jwt.InvalidTokenError as e:
-        print(f"editInfo: Token 无效: {e}")
+        print(f"deleteComment: Token 无效: {e}")
         return {"code": 999, "msg": "Token 无效"}
     except Exception as e:
-        print(f"editInfo: 其他错误: {e}")
+        print(f"deleteComment: 其他错误: {e}")
         return {"code": 999, "msg": f"服务器错误: {str(e)}"}
     if response is not None:
         payload = {

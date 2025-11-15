@@ -15,6 +15,7 @@ from api import food
 # === 路径设置（相对 backend/ 目录） ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DIST_DIR = os.path.normpath(os.path.join(BASE_DIR, "../frontend/dist"))
+IMGREPO_DIR = os.path.normpath(os.path.join(BASE_DIR, "../imgRepo"))
 
 # 创建 Flask 应用；static_url_path 设为空字符串，允许直接以 /assets/... 等路径访问静态文件
 app = Flask(__name__, static_folder=DIST_DIR, static_url_path="")
@@ -159,18 +160,13 @@ def api_user_signUp():
 # === 用户信息修改 === （4）
 @app.post("/api/user/editInfo")
 def api_user_editInfo():
-    try:
-        data = request.get_json()
-    except Exception as e:
-        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
-    if data is None:
-        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+
     token, token_error = _extract_token_from_request()
     if not token:
         return jsonify(code=998, msg=token_error), 401
     # 提取参数（支持只更新一个字段）
-    nickName = data.get("nickName")
-    avatar = data.get("avatar")
+    nickName = request.form.get("nickName")
+    avatar = request.files.get("avatar")
     #校验入参
     if not nickName or not avatar:
         return jsonify(code=999, msg="参数不完整"), 400
@@ -471,6 +467,10 @@ def app_food_evaluateDish():
     except Exception as e:
         print(f"Error calling food.evaluateDish: {e}")
         return jsonify(code=999, msg="服务器内部错误"), 500
+    
+@app.route("/imgRepo/<path:filename>")
+def get_avatar(filename):
+    return send_from_directory(IMGREPO_DIR, filename)
 
 SPA_PATHS = [
     "/",                            # 根路径，直接交给前端路由决定去向（通常跳登录）

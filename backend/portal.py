@@ -11,6 +11,7 @@ import os
 import inspect
 from flask import Flask, send_from_directory, jsonify,request
 from api import user
+from api import food
 # === 路径设置（相对 backend/ 目录） ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DIST_DIR = os.path.normpath(os.path.join(BASE_DIR, "../frontend/dist"))
@@ -168,7 +169,7 @@ def api_user_editInfo():
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if data is None:
         return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    token = request.cookies.get("token")
+    token = _extract_token_from_request()
     if not token:
         return jsonify(code=999, msg="未检测到Token (Cookie 或 body.token)"), 401
     # 提取参数（支持只更新一个字段）
@@ -196,7 +197,7 @@ def api_user_editPassword():
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if data is None:
         return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    token = request.cookies.get("token")
+    token = _extract_token_from_request()
     if not token:
         return jsonify(code=999, msg="未检测到Token"), 401
     #提取新密码
@@ -226,12 +227,9 @@ def api_user_editPassword():
 @app.get("/api/user/getInfo")
 def api_user_getInfo():
     try:
-        data = request.get_json()
+        token = _extract_token_from_request()
     except Exception as e:
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
-    if data is None:
-        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    token = request.cookies.get("token")
     if not token:
         return jsonify(code=999, msg="未检测到Token"), 401
     try:
@@ -248,17 +246,18 @@ def api_user_getInfo():
 @app.get("/api/user/getCommentList")
 def api_user_getCommentList():
     try:
-        data = request.get_json()
+        data_1 = request.headers.get("numPerPage")
+        data_2 = request.headers.get("pageIndex")
     except Exception as e:
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
-    if data is None:
+    if data_1 is None or data_2 is None:
         return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    token = request.cookies.get("token")
+    token = _extract_token_from_request()
     if not token:
         return jsonify(code=999, msg="未检测到Token"), 401
     #提取参数
-    numPerPage = data.get("numPerPage")
-    pageIndex = data.get("pageIndex")
+    numPerPage = data_1.get("numPerPage")
+    pageIndex = data_2.get("pageIndex")
     if not numPerPage or not pageIndex:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
@@ -280,7 +279,7 @@ def api_user_deleteComment():
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if data is None:
         return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    token = request.cookies.get("token")
+    token = _extract_token_from_request()
     if not token:
         return jsonify(code=999, msg="未检测到Token"), 401
     #提取参数
@@ -300,25 +299,22 @@ def api_user_deleteComment():
 # === 档口列表获取 === (9)
 @app.get("/api/food/getStallList")
 def app_food_getStallList():
-    try:
-        data = request.get_json()
-    except Exception as e:
-        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
-    if data is None:
-        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    token = request.cookies.get("token")
+    token = _extract_token_from_request()
     if not token:
         return jsonify(code=999, msg="未检测到Token"), 401
     #提取参数
-    type = data.get("type")
-    canteen = data.get("canteen")
-    collation = data.get("collation")
-    numPerPage = data.get("numPerPage")
-    pageIndex = data.get("pageIndex")
+    try:
+        type = request.headers.get("type")
+        canteen = request.headers.get("canteen")
+        collation = request.headers.get("collation")
+        numPerPage = request.headers.get("numPerPage")
+        pageIndex = request.headers.get("pageIndex")
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if not type or not canteen or not collation or not numPerPage or not pageIndex:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
-        response_data = user.getStallList(type, canteen, collation, numPerPage, pageIndex,token)
+        response_data = food.getStallList(type, canteen, collation, numPerPage, pageIndex,token)
         http_status_code = 200
         if response_data.get("code") != 200:
             http_status_code = 401
@@ -330,21 +326,18 @@ def app_food_getStallList():
 # === 档口详细信息获取 === (10)
 @app.get("/api/food/getStallInfo")
 def app_food_getStallInfo():
-    try:
-        data = request.get_json()
-    except Exception as e:
-        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
-    if data is None:
-        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    token = request.cookies.get("token")
+    token = _extract_token_from_request()
     if not token:
         return jsonify(code=999, msg="未检测到Token"), 401
     #提取参数
-    stallID = data.get("stallID")
+    try:
+        stallID = request.headers.get("stallID")
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if not stallID:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
-        response_data = user.getStallInfo(stallID,token)
+        response_data = food.getStallInfo(stallID,token)
         http_status_code = 200
         if response_data.get("code") != 200:
             http_status_code = 401
@@ -356,23 +349,20 @@ def app_food_getStallInfo():
 # === 档口全部评论 === (11)
 @app.get("/api/food/getStallCommentList")
 def app_food_getStallCommentList():
-    try:
-        data = request.get_json()
-    except Exception as e:
-        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
-    if data is None:
-        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    token = request.cookies.get("token")
+    token = _extract_token_from_request()
     if not token:
         return jsonify(code=999, msg="未检测到Token"), 401
     #提取参数
-    stallID = data.get("stallID")
-    numPerPage = data.get("numPerPage")
-    pageIndex = data.get("pageIndex")
+    try:
+        stallID = request.headers.get("stallID")
+        numPerPage = request.headers.get("numPerPage")
+        pageIndex = request.headers.get("stallID")
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if not stallID or not numPerPage or not pageIndex:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
-        response_data = user.getStallCommentList(stallID,numPerPage,pageIndex,token)
+        response_data = food.getStallCommentList(stallID,numPerPage,pageIndex,token)
         http_status_code = 200
         if response_data.get("code") != 200:
             http_status_code = 401
@@ -390,7 +380,7 @@ def app_food_createStallComment():
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if data is None:
         return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    token = request.cookies.get("token")
+    token = _extract_token_from_request()
     if not token:
         return jsonify(code=999, msg="未检测到Token"), 401
     #提取参数
@@ -403,7 +393,7 @@ def app_food_createStallComment():
     if not stallID or not rating or not content or not pictrue1Url or not picture2Url or not picture3Url:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
-        response_data = user.createStallComment(stallID, rating, content, pictrue1Url, picture2Url, picture3Url, token)
+        response_data = food.createStallComment(stallID, rating, content, pictrue1Url, picture2Url, picture3Url, token)
         http_status_code = 200
         if response_data.get("code") != 200:
             http_status_code = 401
@@ -421,7 +411,7 @@ def app_food_evaluationComment():
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if data is None:
         return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    token = request.cookies.get("token")
+    token = _extract_token_from_request()
     if not token:
         return jsonify(code=999, msg="未检测到Token"), 401
     #提取参数
@@ -430,7 +420,7 @@ def app_food_evaluationComment():
     if not commentID or not newEvaluation:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
-        response_data = user.evaluationComment(commentID,newEvaluation,token)
+        response_data = food.evaluationComment(commentID,newEvaluation,token)
         http_status_code = 200
         if response_data.get("code") != 200:
             http_status_code = 401
@@ -442,21 +432,18 @@ def app_food_evaluationComment():
 # === 菜品列表获取 === (14)
 @app.get("/api/food/getStallDishList")
 def app_food_getStallDishList():
-    try:
-        data = request.get_json()
-    except Exception as e:
-        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
-    if data is None:
-        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    token = request.cookies.get("token")
+    token = _extract_token_from_request()
     if not token:
         return jsonify(code=999, msg="未检测到Token"), 401
     #提取参数
-    stallID = data.get("stallID")
+    try:
+        stallID = request.headers.get("stallID")
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if not stallID:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
-        response_data = user.getStallDishList(stallID,token)
+        response_data = food.getStallDishList(stallID,token)
         http_status_code = 200
         if response_data.get("code") != 200:
             http_status_code = 401
@@ -474,7 +461,7 @@ def app_food_evaluateDish():
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if data is None:
         return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    token = request.cookies.get("token")
+    token = _extract_token_from_request()
     if not token:
         return jsonify(code=999, msg="未检测到Token"), 401
     #提取参数
@@ -483,7 +470,7 @@ def app_food_evaluateDish():
     if not dishID or not newEvaluation:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
-        response_data = user.getCommentList(dishID,newEvaluation,token)
+        response_data = food.evaluateDish(dishID,newEvaluation,token)
         http_status_code = 200
         if response_data.get("code") != 200:
             http_status_code = 401

@@ -25,6 +25,28 @@ def _serve_index():
     """返回前端单页应用的入口文件。"""
     return send_from_directory(app.static_folder, INDEX_FILE)
 
+def _extract_token_from_request():
+    """从请求头或 Cookie 中提取 token。"""
+    auth_header = request.headers.get("Authorization")
+    if auth_header is not None:
+        auth_header = auth_header.strip()
+        if not auth_header:
+            return None, "Authorization 头缺少 token"
+        scheme, _, remainder = auth_header.partition(" ")
+        if scheme.lower() == "bearer":
+            token = remainder.strip()
+            if not token:
+                return None, "Authorization 头缺少 token"
+            return token, None
+        if " " in auth_header:
+            return None, "Authorization 头格式错误"
+        return auth_header, None
+
+    cookie_token = request.cookies.get("token")
+    if cookie_token:
+        return cookie_token, None
+    return None, "未检测到Token"
+
 # === 业务健康检查（可选） ===
 @app.get("/api/health")
 def health():
@@ -38,13 +60,11 @@ def api_check_token():
     Token 校验 API 接口。
     负责从 Cookie 中获取 Token，并调用 user 模块的 checkToken 函数。
     """
-    # 1. 从请求的 Cookie 中获取 "token"
-    token = request.cookies.get("token")
-
-    # 2. 校验 token 是否存在
+    # 1. 从请求头的Authorization字段调取token
+    token, token_error = _extract_token_from_request()
+    # 2. 若不含token，回报401 UnAuthorized
     if not token:
-        # 如果没有 token，返回 401 Unauthorized
-        return jsonify(code=999, msg="未检测到Token (Cookie)"), 401
+        return jsonify(code=998, msg=token_error), 401
 
     # 3. 调用 user.py 中的业务逻辑
     try:

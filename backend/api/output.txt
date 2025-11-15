@@ -1,8 +1,0 @@
-﻿POST with -1-byte payload
-received 201-byte response of content type application/json
-
-code data                                                                                                 
----- ----                                                                                                 
- 200 @{token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyTmFtZSI6ImFkbWluIiwicGFzc3dvcmQiOiIxMjM0NTYiL...
-
-

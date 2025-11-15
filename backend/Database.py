@@ -94,8 +94,8 @@ db_pool = pooling.MySQLConnectionPool(
     pool_size=10,
     pool_reset_session=True,
     host="localhost",
-    user="root", #自行修改为自己的用户名
-    password="***", #自行修改为自己的密码
+    user="ljy",
+    password="123456",
     database="test"
 )
 def unitTest():

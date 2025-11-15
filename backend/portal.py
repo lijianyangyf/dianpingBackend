@@ -71,23 +71,19 @@ def api_check_token():
     try:
         # user.checkToken 会处理验证、数据库查询和新 token 的生成
         response_data = user.checkToken(token)
-        
+
         # 4. 根据业务逻辑的返回码，决定 HTTP 状态码
-        http_status_code = 200 # 默认 200
+        http_status_code = 200  # 默认 200
         if response_data.get("code") != 200:
-            # 业务逻辑返回 999 (例如数据库中用户已不存在)
-            http_status_code = 401 # 401 Unauthorized
-        new_token=response_data.get("data").get("token")
-        resp = jsonify(response_data.get("code"))
-        if new_token:
-            resp.set_cookie("token", new_token)
-        return resp, http_status_code
-    
+            # 业务逻辑返回 998 (例如数据库中用户已不存在)
+            http_status_code = 401  # 401 Unauthorized
+        return jsonify(response_data), http_status_code
+
     except Exception as e:
         # 捕获 user.checkToken 中抛出的异常
         # 这通常意味着 Token 解码失败（例如：已过期、签名无效）
-        print(f"Error calling user.checkToken: {e}") 
-        return jsonify(code=999, msg="Token无效或已过期"), 401
+        print(f"Error calling user.checkToken: {e}")
+        return jsonify(code=998, msg="Token无效或已过期"), 401
 
 # === 登录 === （2）
 @app.post("/api/user/login")  # 使用 app.post 来明确指定处理 POST 请求
@@ -169,9 +165,9 @@ def api_user_editInfo():
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if data is None:
         return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    token = _extract_token_from_request()
+    token, token_error = _extract_token_from_request()
     if not token:
-        return jsonify(code=999, msg="未检测到Token (Cookie 或 body.token)"), 401
+        return jsonify(code=998, msg=token_error), 401
     # 提取参数（支持只更新一个字段）
     nickName = data.get("nickName")
     avatar = data.get("avatar")
@@ -197,9 +193,9 @@ def api_user_editPassword():
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if data is None:
         return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    token = _extract_token_from_request()
+    token, token_error = _extract_token_from_request()
     if not token:
-        return jsonify(code=999, msg="未检测到Token"), 401
+        return jsonify(code=998, msg=token_error), 401
     #提取新密码
     newPassword = data.get("newPassword")
     if not newPassword:
@@ -226,12 +222,9 @@ def api_user_editPassword():
 # === 用户信息获取 === （6）
 @app.get("/api/user/getInfo")
 def api_user_getInfo():
-    try:
-        token = _extract_token_from_request()
-    except Exception as e:
-        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    token,token_error= _extract_token_from_request()
     if not token:
-        return jsonify(code=999, msg="未检测到Token"), 401
+        return jsonify(code=999, msg=token_error), 401
     try:
         response_data = user.getInfo(token)
         http_status_code = 200
@@ -252,9 +245,9 @@ def api_user_getCommentList():
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if data_1 is None or data_2 is None:
         return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    token = _extract_token_from_request()
+    token, token_error = _extract_token_from_request()
     if not token:
-        return jsonify(code=999, msg="未检测到Token"), 401
+        return jsonify(code=998, msg=token_error), 401
     #提取参数
     numPerPage = data_1.get("numPerPage")
     pageIndex = data_2.get("pageIndex")
@@ -279,9 +272,9 @@ def api_user_deleteComment():
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if data is None:
         return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    token = _extract_token_from_request()
+    token, token_error = _extract_token_from_request()
     if not token:
-        return jsonify(code=999, msg="未检测到Token"), 401
+        return jsonify(code=998, msg=token_error), 401
     #提取参数
     commentID = data.get("commentID")
     if not commentID:
@@ -299,9 +292,9 @@ def api_user_deleteComment():
 # === 档口列表获取 === (9)
 @app.get("/api/food/getStallList")
 def app_food_getStallList():
-    token = _extract_token_from_request()
+    token, token_error = _extract_token_from_request()
     if not token:
-        return jsonify(code=999, msg="未检测到Token"), 401
+        return jsonify(code=998, msg=token_error), 401
     #提取参数
     try:
         type = request.headers.get("type")
@@ -326,9 +319,9 @@ def app_food_getStallList():
 # === 档口详细信息获取 === (10)
 @app.get("/api/food/getStallInfo")
 def app_food_getStallInfo():
-    token = _extract_token_from_request()
+    token, token_error = _extract_token_from_request()
     if not token:
-        return jsonify(code=999, msg="未检测到Token"), 401
+        return jsonify(code=998, msg=token_error), 401
     #提取参数
     try:
         stallID = request.headers.get("stallID")
@@ -349,9 +342,9 @@ def app_food_getStallInfo():
 # === 档口全部评论 === (11)
 @app.get("/api/food/getStallCommentList")
 def app_food_getStallCommentList():
-    token = _extract_token_from_request()
+    token, token_error = _extract_token_from_request()
     if not token:
-        return jsonify(code=999, msg="未检测到Token"), 401
+        return jsonify(code=998, msg=token_error), 401
     #提取参数
     try:
         stallID = request.headers.get("stallID")
@@ -380,9 +373,9 @@ def app_food_createStallComment():
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if data is None:
         return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    token = _extract_token_from_request()
+    token, token_error = _extract_token_from_request()
     if not token:
-        return jsonify(code=999, msg="未检测到Token"), 401
+        return jsonify(code=998, msg=token_error), 401
     #提取参数
     stallID = data.get("stallID")
     rating = data.get("rating")
@@ -411,9 +404,9 @@ def app_food_evaluationComment():
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if data is None:
         return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    token = _extract_token_from_request()
+    token, token_error = _extract_token_from_request()
     if not token:
-        return jsonify(code=999, msg="未检测到Token"), 401
+        return jsonify(code=998, msg=token_error), 401
     #提取参数
     commentID = data.get("commentID")
     newEvaluation = data.get("newEvaluation")
@@ -432,9 +425,9 @@ def app_food_evaluationComment():
 # === 菜品列表获取 === (14)
 @app.get("/api/food/getStallDishList")
 def app_food_getStallDishList():
-    token = _extract_token_from_request()
+    token, token_error = _extract_token_from_request()
     if not token:
-        return jsonify(code=999, msg="未检测到Token"), 401
+        return jsonify(code=998, msg=token_error), 401
     #提取参数
     try:
         stallID = request.headers.get("stallID")
@@ -461,9 +454,9 @@ def app_food_evaluateDish():
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if data is None:
         return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    token = _extract_token_from_request()
+    token, token_error = _extract_token_from_request()
     if not token:
-        return jsonify(code=999, msg="未检测到Token"), 401
+        return jsonify(code=998, msg=token_error), 401
     #提取参数
     dishID = data.get("dishID")
     newEvaluation = data.get("newEvaluation")

@@ -21,7 +21,8 @@ def checkToken(token):
         userName = payload.get("userName")
         password = payload.get("password")
         db.connect()
-        response=db.execute_query("select * from User where userName=%(userName)s AND password=%(password)s",{"userName":userName,"password":password})
+        with Database.Redislock(Database.rcli,f"user:{userName}"):
+            response=db.execute_query("select * from User where userName=%(userName)s AND password=%(password)s",{"userName":userName,"password":password})
         db.disconnect()
     except Exception as e:
         print(e)

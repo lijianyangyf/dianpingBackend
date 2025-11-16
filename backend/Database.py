@@ -29,11 +29,12 @@ class Redislock:
         return False
     def release(self):
         try:
-            self._unlock(keys=[self._key], args=[str(uuid.uuid4())])
+            self._unlock(keys=[self._key], args=[self._token])
         except redis.RedisError:
             raise
     def __enter__(self):
-        self.acquire()
+        if not self.acquire():
+            raise TimeoutError(f"Failed to acquire lock: {self._key}")
         return self
     def __exit__(self,exc_type,exc,tb):
         self.release()
@@ -94,12 +95,12 @@ db_pool = pooling.MySQLConnectionPool(
     pool_size=10,
     pool_reset_session=True,
     host="localhost",
-    user="root", #自行修改为自己的用户名
-    password="***", #自行修改为自己的密码
+    user="ljy", #自行修改为自己的用户名
+    password="123456", #自行修改为自己的密码
     database="test"
 )
+rcli = redis.Redis(host="127.0.0.1", port=6379, db=0, decode_responses=True)
 def unitTest():
-    rcli = redis.Redis(host="127.0.0.1", port=6379, db=0, decode_responses=True)
     db=Database()
     userId="user:test"
     db.connect()

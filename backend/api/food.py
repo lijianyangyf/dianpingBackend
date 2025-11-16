@@ -655,7 +655,7 @@ def evaluateDish(dishID, newEvaluation, token):
         else:
             newEvaluation="无"
         #使用数据库进行更新
-        response = db.execute_query("update DishEvaluation set evaluation=%(newEvaluation)s where dishID=%(dishID)s", {"newEvaluation":newEvaluation, "dishID":dishID})
+        response = db.execute_query("update DishEvaluation set evaluation=%(newEvaluation)s where dishID=%(dishID)s and userName=%(userName)s", {"newEvaluation":newEvaluation, "dishID":dishID, "userName":userName})
         db.disconnect()
         print(response)
     except jwt.ExpiredSignatureError:

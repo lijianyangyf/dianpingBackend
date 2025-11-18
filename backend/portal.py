@@ -245,8 +245,8 @@ def api_user_getCommentList():
     if not token:
         return jsonify(code=998, msg=token_error), 401
     #提取参数
-    numPerPage = data_1.get("numPerPage")
-    pageIndex = data_2.get("pageIndex")
+    numPerPage = data_1
+    pageIndex = data_2
     if not numPerPage or not pageIndex:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
@@ -293,11 +293,11 @@ def app_food_getStallList():
         return jsonify(code=998, msg=token_error), 401
     #提取参数
     try:
-        type = request.headers.get("type")
-        canteen = request.headers.get("canteen")
-        collation = request.headers.get("collation")
-        numPerPage = request.headers.get("numPerPage")
-        pageIndex = request.headers.get("pageIndex")
+        type = request.args.get("type")
+        canteen = request.args.get("canteen")
+        collation = request.args.get("collation")
+        numPerPage = request.args.get("numPerPage")
+        pageIndex = request.args.get("pageIndex")
     except Exception as e:
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if not type or not canteen or not collation or not numPerPage or not pageIndex:

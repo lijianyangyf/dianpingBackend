@@ -380,11 +380,11 @@ def deleteComment(commentID, token):
         if not check_response or len(check_response) == 0:
             db.disconnect()
             return {"code": 999, "msg": "评论不存在或无权删除"}
-        response_userComment = db.execute_query("delete from UserComment where commentID=%(commentID)s and userName=%(userName)s",{"commentID":commentID_int,"userName":userName})
+        response_userComment = db.execute_query("delete from UserComment where commentID=%(commentID)s",{"commentID":commentID_int})
+        print(f"UserComment 删除结果: {response_userComment}")
         response = db.execute_query("delete from StallComment where ID=%(commentID)s and userName=%(userName)s",{"commentID":commentID_int,"userName":userName})
         db.disconnect()
-        print(response_userComment)
-        print(response)
+        print(f"StallComment 删除结果: {response}")
     except jwt.ExpiredSignatureError:
         return {"code": 999, "msg": "Token 已过期"}
     except jwt.InvalidTokenError as e:
@@ -393,7 +393,7 @@ def deleteComment(commentID, token):
     except Exception as e:
         print(f"deleteComment: 其他错误: {e}")
         return {"code": 999, "msg": f"服务器错误: {str(e)}"}
-    if response is not None:
+    if response and isinstance(response, dict) and response.get("rowcount", 0) > 0:
         payload = {
             "userName":userName,
             "password":password,

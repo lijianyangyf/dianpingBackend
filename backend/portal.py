@@ -235,8 +235,8 @@ def api_user_getInfo():
 @app.get("/api/user/getCommentList")
 def api_user_getCommentList():
     try:
-        data_1 = request.headers.get("numPerPage")
-        data_2 = request.headers.get("pageIndex")
+        data_1 = request.args.get("numPerPage")
+        data_2 = request.args.get("pageIndex")
     except Exception as e:
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if data_1 is None or data_2 is None:
@@ -320,7 +320,7 @@ def app_food_getStallInfo():
         return jsonify(code=998, msg=token_error), 401
     #提取参数
     try:
-        stallID = request.headers.get("stallID")
+        stallID = request.args.get("stallID")
     except Exception as e:
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if not stallID:
@@ -343,9 +343,9 @@ def app_food_getStallCommentList():
         return jsonify(code=998, msg=token_error), 401
     #提取参数
     try:
-        stallID = request.headers.get("stallID")
-        numPerPage = request.headers.get("numPerPage")
-        pageIndex = request.headers.get("stallID")
+        stallID = request.args.get("stallID")
+        numPerPage = request.args.get("numPerPage")
+        pageIndex = request.args.get("stallID")
     except Exception as e:
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if not stallID or not numPerPage or not pageIndex:
@@ -426,7 +426,7 @@ def app_food_getStallDishList():
         return jsonify(code=998, msg=token_error), 401
     #提取参数
     try:
-        stallID = request.headers.get("stallID")
+        stallID = request.args.get("stallID")
     except Exception as e:
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if not stallID:

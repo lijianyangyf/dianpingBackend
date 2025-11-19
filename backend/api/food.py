@@ -680,3 +680,45 @@ def evaluateDish(dishID, newEvaluation, token):
         return {"code":200, "data": {"token": token}}
     else:
         return {"code":999, "msg":"菜品评价更新失败"}
+
+#@16 店铺评分更新函数(老唐)————初版
+def evaluateStallRating(stallID):
+    db=Database.Database()
+    response={}
+    total_rows=0
+    try:
+        db.connect()
+        response_getAllRating=db.execute_query("select rating from StallComment where stallID=%(stallID)s",{"stallID":stallID})
+        response_rows = db.execute_query("select count(*) as total_rows from StallComment where stallID=%(stallID)s",{"stallID":stallID})
+        if response_rows and len(response_rows) > 0:
+            if isinstance(response_rows[0], tuple):
+                total_rows = response_rows[0][0]  # 元组格式
+            else:
+                total_rows = response_rows[0].get("total_rows", 0)  # 字典格式
+        else:
+            total_rows = 0
+        total_rating=0.0
+        if response_getAllRating and len(response_getAllRating) > 0:
+            for row in response_getAllRating:
+                # 根据返回的数据类型处理
+                if isinstance(row, dict):
+                    # 如果返回的是字典格式
+                    total_rating+=row.get("rating")
+                else:
+                    # 如果返回的是元组格式，使用索引访问
+                    total_rating+=float(row[0]) if len(row)>0 else 0
+        average_rating=total_rating/total_rows
+        if average_rating > 1.0 and average_rating < 5.0:
+            response=db.execute_query("update Stall set rating=%(average_rating)s where ID=%(stallID)s",{"average_rating":average_rating, "stallID":stallID})
+        else:
+            print(f"evaluateStallRating: 店铺星级需大于1小于5: {e}")
+            return {"code": 999, "msg": f"服务器错误: {str(e)}"}
+        db.disconnect()
+        print(response)
+    except Exception as e:
+        print(f"evaluateStallRating: 出现错误: {e}")
+        return {"code": 999, "msg": f"服务器错误: {str(e)}"}
+    if response is not None:
+        return True
+    else:
+        return False

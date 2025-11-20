@@ -48,7 +48,7 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/food/getStallList" -Method Pos
 """
 
 #@9获取档口列表函数(老唐版)————测试完成
-def getStallList(type_str,canteen,collation,numPerPage,pageIndex,token):
+def getStallList(type_str,canteen,orderBy,collation,numPerPage,pageIndex,token):
     db = Database.Database()
     response={}
     userName=""
@@ -56,6 +56,7 @@ def getStallList(type_str,canteen,collation,numPerPage,pageIndex,token):
     numPerPage_int = int(numPerPage)
     pageIndex_int = int(pageIndex)
     type_str = str(type_str) if type_str is not None else ""
+    orderBy = str(orderBy) if orderBy is not None else "rating"
     canteen = str(canteen) if canteen is not None else ""
     collation = str(collation) if collation is not None else "desc"
     numPerPage = str(numPerPage) if numPerPage is not None else "10"
@@ -70,10 +71,39 @@ def getStallList(type_str,canteen,collation,numPerPage,pageIndex,token):
         password = payload.get("password")
         db.connect()
         #使用数据库进行查询
+        if collation == "ascend":
+            collation = "asc"
+        elif collation == "descend":
+            collation = "desc"
         allowed_collations = ["asc", "desc", "ASC", "DESC"]
         if collation.lower() not in [c.lower() for c in allowed_collations]:
             collation = "desc" 
-        response = db.execute_query("select ID,name,rating,meanPrice,canteen,signatureDish,pictureUrl from Stall where type = %(type)s and canteen=%(canteen)s order by rating "+collation,{"type":type_str,"canteen":canteen})
+        if orderBy == "price":
+            orderBy = "meanPrice"
+        allowed_order_fields = ["rating", "meanPrice"]
+        if orderBy not in allowed_order_fields:
+            orderBy = "rating"
+        where_conditions = []
+        # 处理 type 条件
+        if type_str and type_str != "全部":
+            where_conditions.append(f"type = '{type_str}'")
+        # 处理 canteen 条件
+        if canteen and canteen != "全部":
+            where_conditions.append(f"canteen = '{canteen}'")
+        # 构建完整的 WHERE 子句
+        where_clause = ""
+        if where_conditions:
+            where_clause = "where " + " and ".join(where_conditions)
+        else:
+            where_clause = ""  # 如果没有条件，则没有 WHERE 子句
+        # 构建完整的 SQL 查询
+        base_query = f"select ID, name, rating, meanPrice, canteen, signatureDish, pictureUrl from Stall {where_clause} order by {orderBy} {collation}"
+        # 计算分页偏移量
+        offset = (pageIndex_int - 1) * numPerPage_int
+        # 添加分页限制
+        paginated_query = base_query + f" limit {numPerPage_int} offset {offset}"
+        # 执行查询
+        response = db.execute_query(paginated_query)
         response_rows = db.execute_query("select count(*) as total_rows from Stall where where type = %(type)s and canteen=%(canteen)s",{"type":type_str,"canteen":canteen})
 
         db.disconnect()
@@ -317,6 +347,7 @@ def getStallCommentList(stallID, numPerPage, pageIndex, token):
     userName=""
     password=""
     numPerPage_int = int(numPerPage)
+    pageIndex_int = int(pageIndex)
     try:
         token_check = checkToken(token)
         if token_check.get("code") != 200:
@@ -326,12 +357,13 @@ def getStallCommentList(stallID, numPerPage, pageIndex, token):
         userName = payload.get("userName")
         password = payload.get("password")
         db.connect()
+        offset = (pageIndex_int - 1) * numPerPage_int
         #使用数据库进行查询
         response = db.execute_query("""
             select sc.ID, sc.userName as reviewerName, u.avatarUrl, sc.dateTime,
             sc.rating, sc.recommendCount as `like`, sc.content, sc.picture1Url,
             sc.picture2Url, sc.picture3Url from StallComment sc inner join User u on sc.userName = u.userName
-            where sc.stallID = %(stallID)s order by sc.dateTime desc""", {"stallID":stallID})
+            where sc.stallID = %(stallID)s order by sc.dateTime desc limit %(limit)s offset %(offset)s""", {"stallID":stallID,"limit": numPerPage_int,"offset": offset})
         response_rows = db.execute_query("""
             select count(*) as comment_count from StallComment sc inner 
             join User u on sc.userName = u.userName

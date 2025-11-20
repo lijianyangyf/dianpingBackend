@@ -281,8 +281,9 @@ def getCommentList(numPerPage, pageIndex, token):
         userName = payload.get("userName")
         password = payload.get("password")
         db.connect()
+        offset = (pageIndex_int - 1) * numPerPage_int
         #使用数据库进行查询
-        response = db.execute_query("select sc.ID,s.name as stall_name,s.canteen,sc.dateTime,sc.rating,sc.recommendCount,sc.content,sc.picture1Url,sc.picture2Url,sc.picture3Url from StallComment sc inner join Stall s on sc.stallID = s.ID where sc.userName = %(userName)s order by sc.dateTime desc",{"userName":userName})
+        response = db.execute_query("select sc.ID,s.name as stall_name,s.canteen,sc.dateTime,sc.rating,sc.recommendCount,sc.content,sc.picture1Url,sc.picture2Url,sc.picture3Url from StallComment sc inner join Stall s on sc.stallID = s.ID where sc.userName = %(userName)s order by sc.dateTime desc limit %(limit)s offset %(offset)s",{"userName":userName,"limit": numPerPage_int,"offset": offset})
         response_rows = db.execute_query("select count(*) as total_rows from StallComment sc inner join Stall s on sc.stallID = s.ID where sc.userName = %(userName)s;", {"userName": userName})
         db.disconnect()
         if response_rows and len(response_rows) > 0:

@@ -295,15 +295,16 @@ def app_food_getStallList():
     try:
         type = request.args.get("type")
         canteen = request.args.get("canteen")
+        orderBy = request.args.get("orderBy")
         collation = request.args.get("collation")
         numPerPage = request.args.get("numPerPage")
         pageIndex = request.args.get("pageIndex")
     except Exception as e:
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
-    if not type or not canteen or not collation or not numPerPage or not pageIndex:
+    if not type or not canteen or not orderBy or not collation or not numPerPage or not pageIndex:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
-        response_data = food.getStallList(type, canteen, collation, numPerPage, pageIndex,token)
+        response_data = food.getStallList(type, canteen, orderBy, collation, numPerPage, pageIndex, token)
         http_status_code = 200
         if response_data.get("code") != 200:
             http_status_code = 401

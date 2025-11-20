@@ -720,13 +720,24 @@ def evaluateStallRating(stallID):
     total_rows=0
     try:
         db.connect()
-        response_getAllRating=db.execute_query("select rating from StallComment where stallID=%(stallID)s",{"stallID":stallID})
-        response_rows = db.execute_query("select count(*) as total_rows from StallComment where stallID=%(stallID)s",{"stallID":stallID})
+        response_getAllRating = db.execute_query(
+            "select rating from StallComment where stallID=%(stallID)s",
+            {"stallID": stallID}
+        )
+        response_rows = db.execute_query(
+            "select count(*) as total_rows from StallComment where stallID=%(stallID)s",
+            {"stallID": stallID}
+        )
         if response_rows and len(response_rows) > 0:
             if isinstance(response_rows[0], tuple):
-                total_rows = response_rows[0][0]  # 元组格式
+                total_rows = int(response_rows[0][0])  # 元组格式
+            elif isinstance(response_rows[0], dict):
+                total_rows = int(response_rows[0].get("total_rows", 0))  # 字典格式
             else:
-                total_rows = response_rows[0].get("total_rows", 0)  # 字典格式
+                try:
+                    total_rows = int(response_rows[0])
+                except Exception:
+                    total_rows = 0
         else:
             total_rows = 0
         total_rating=0.0
@@ -735,22 +746,67 @@ def evaluateStallRating(stallID):
                 # 根据返回的数据类型处理
                 if isinstance(row, dict):
                     # 如果返回的是字典格式
-                    total_rating+=row.get("rating")
+                    try:
+                        total_rating += float(row.get("rating", 0))
+                    except Exception:
+                        total_rating += 0.0
                 else:
                     # 如果返回的是元组格式，使用索引访问
-                    total_rating+=float(row[0]) if len(row)>0 else 0
-        average_rating=total_rating/total_rows
-        if average_rating > 1.0 and average_rating < 5.0:
-            response=db.execute_query("update Stall set rating=%(average_rating)s where ID=%(stallID)s",{"average_rating":average_rating, "stallID":stallID})
+                    try:
+                        total_rating += float(row[0]) if len(row) > 0 and row[0] is not None else 0.0
+                    except Exception:
+                        total_rating += 0.0
+        # 如果没有评论，无法计算平均分，直接返回 False（不更新）
+        if total_rows == 0:
+            db.disconnect()
+            return False
+        average_rating = total_rating / total_rows
+        # 限定平均分在 1.0 到 5.0（包含边界）
+        if average_rating >= 1.0 and average_rating <= 5.0:
+            response = db.execute_query(
+                "update Stall set rating=%(average_rating)s where ID=%(stallID)s",
+                {"average_rating": average_rating, "stallID": stallID}
+            )
         else:
-            print(f"evaluateStallRating: 店铺星级需大于1小于5: {e}")
-            return {"code": 999, "msg": f"服务器错误: {str(e)}"}
+            db.disconnect()
+            print(f"evaluateStallRating: 计算出的平均评分不在合法范围: {average_rating}")
+            return False
         db.disconnect()
         print(response)
     except Exception as e:
         print(f"evaluateStallRating: 出现错误: {e}")
-        return {"code": 999, "msg": f"服务器错误: {str(e)}"}
+        return False
     if response is not None:
         return True
     else:
         return False
+
+#@17 更新招牌菜品函数(老唐)————初版
+def evaluatesignatureDish(stallID):
+    db = Database.Database()
+    response={}
+    try:
+        db.connect()
+        response_topdish=db.execute_query("select name, recommendCount from Dish where stallID=%(stallID)s order by recommendCount desc, name asc limit 1",{"stallID":stallID})
+        if not response_topdish or len(response_topdish) == 0:
+            return False
+        if isinstance(response_topdish[0], dict):
+            top_dish_name = response_topdish[0].get("name")
+        else:
+            top_dish_name = response_topdish[0][0] if len(response_topdish[0]) > 0 else None
+        if not top_dish_name:
+            return False
+        response = db.execute_query(
+            "update Stall set signatureDish = %(top_dish_name)s where ID = %(stallID)s",
+            {"top_dish_name": top_dish_name, "stallID": stallID}
+        )
+        # 检查更新是否成功
+        return response and len(response) > 0
+    except Exception as e:
+        print(f"evaluatesignatureDish: 出现错误: {e}")
+        return False
+    finally:
+        try:
+            db.disconnect()
+        except:
+            pass

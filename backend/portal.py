@@ -12,6 +12,11 @@ import inspect
 from flask import Flask, send_from_directory, jsonify,request
 from api import user
 from api import food
+from api.background import admin
+from api.background import user as bg_user
+from api.background import food as bg_food
+from api.background import dish as bg_dish
+from api.background import adminManage as bg_adm
 # === 路径设置（相对 backend/ 目录） ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DIST_DIR = os.path.normpath(os.path.join(BASE_DIR, "../frontend/dist"))
@@ -138,11 +143,9 @@ def api_user_signUp():
             return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
     except Exception as e:
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
-    #提取三个参数
     userName = data.get("userName")
     nickName = data.get("nickName")
     password = data.get("password")
-    #校验入参
     if not userName or not nickName or not password:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
@@ -164,13 +167,11 @@ def api_user_editInfo():
     token, token_error = _extract_token_from_request()
     if not token:
         return jsonify(code=998, msg=token_error), 401
-    # 提取参数（支持只更新一个字段）
     nickName = request.form.get("nickName")
     avatar = request.files.get("avatar")
-    #校验入参
     if not nickName or not avatar:
         return jsonify(code=999, msg="参数不完整"), 400
-    try:#使用user.editInfo函数
+    try:
         response_data = user.editInfo(nickName,avatar,token)
         http_status_code = 200
         if response_data.get("code") != 200:
@@ -192,7 +193,6 @@ def api_user_editPassword():
     token, token_error = _extract_token_from_request()
     if not token:
         return jsonify(code=998, msg=token_error), 401
-    #提取新密码
     newPassword = data.get("newPassword")
     if not newPassword:
         return jsonify(code=999, msg="参数不完整"), 400
@@ -201,14 +201,12 @@ def api_user_editPassword():
         http_status_code = 200
         if response_data.get("code") != 200:
             http_status_code = 401
-        #更新token
         new_token = None
         if isinstance(response_data.get("data"), dict):
             new_token = response_data.get("data").get("token")
         if new_token:
             resp = jsonify(response_data)
             resp.set_cookie("token", new_token)
-
             return resp, http_status_code
         return jsonify(response_data), http_status_code
     except Exception as e:
@@ -244,7 +242,6 @@ def api_user_getCommentList():
     token, token_error = _extract_token_from_request()
     if not token:
         return jsonify(code=998, msg=token_error), 401
-    #提取参数
     numPerPage = data_1
     pageIndex = data_2
     if not numPerPage or not pageIndex:
@@ -271,7 +268,6 @@ def api_user_deleteComment():
     token, token_error = _extract_token_from_request()
     if not token:
         return jsonify(code=998, msg=token_error), 401
-    #提取参数
     commentID = data.get("commentID")
     if not commentID:
         return jsonify(code=999, msg="参数不完整"), 400
@@ -291,7 +287,6 @@ def app_food_getStallList():
     token, token_error = _extract_token_from_request()
     if not token:
         return jsonify(code=998, msg=token_error), 401
-    #提取参数
     try:
         type = request.args.get("type")
         canteen = request.args.get("canteen")
@@ -319,7 +314,6 @@ def app_food_getStallInfo():
     token, token_error = _extract_token_from_request()
     if not token:
         return jsonify(code=998, msg=token_error), 401
-    #提取参数
     try:
         stallID = request.args.get("stallID")
     except Exception as e:
@@ -342,7 +336,6 @@ def app_food_getStallCommentList():
     token, token_error = _extract_token_from_request()
     if not token:
         return jsonify(code=998, msg=token_error), 401
-    #提取参数
     try:
         stallID = request.args.get("stallID")
         numPerPage = request.args.get("numPerPage")
@@ -373,7 +366,6 @@ def app_food_createStallComment():
     token, token_error = _extract_token_from_request()
     if not token:
         return jsonify(code=998, msg=token_error), 401
-    #提取参数
     stallID = data.get("stallID")
     rating = data.get("rating")
     content = data.get("content")
@@ -404,7 +396,6 @@ def app_food_evaluationComment():
     token, token_error = _extract_token_from_request()
     if not token:
         return jsonify(code=998, msg=token_error), 401
-    #提取参数
     commentID = data.get("commentID")
     newEvaluation = data.get("newEvaluation")
     if not commentID or not newEvaluation:
@@ -425,7 +416,6 @@ def app_food_getStallDishList():
     token, token_error = _extract_token_from_request()
     if not token:
         return jsonify(code=998, msg=token_error), 401
-    #提取参数
     try:
         stallID = request.args.get("stallID")
     except Exception as e:
@@ -454,7 +444,6 @@ def app_food_evaluateDish():
     token, token_error = _extract_token_from_request()
     if not token:
         return jsonify(code=998, msg=token_error), 401
-    #提取参数
     dishID = data.get("dishID")
     newEvaluation = data.get("newEvaluation")
     if not dishID or not newEvaluation:
@@ -469,6 +458,506 @@ def app_food_evaluateDish():
         print(f"Error calling food.evaluateDish: {e}")
         return jsonify(code=999, msg="服务器内部错误"), 500
     
+# === 管理员token验证 === (16)
+@app.get("/api/background/checkToken")
+def api_background_checkToken():
+    token, token_error = _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    try:
+        response_data = admin.checkToken(token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling admin.checkToken: {e}")
+        return jsonify(code=997, msg="Token无效或已过期"), 401
+    
+# === 管理员登录 === (17)
+@app.post("/api/background/admin/login")
+def api_admin_login():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    ID = data.get("ID")
+    password = data.get("password")
+    if not ID or not password:
+        return jsonify(code=999, msg="用户名或密码错误"), 400
+    try:
+        response_data = admin.login(ID, password)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401 
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling admin.login: {e}") 
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 管理员信息修改 === (18)
+@app.post("/api/background/admin/editInfo")
+def api_admin_editInfo():
+    token, token_error = _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    name = request.form.get("name")
+    avatar = request.files.get("avatar")
+    if not name or not avatar:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = admin.editInfo(name,avatar,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling admin.editInfo: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+    
+# === 管理员密码修改 === (19)
+@app.post("/api/background/admin/editPassword")
+def api_admin_editPassword():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token, token_error = _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    #提取新密码
+    password = data.get("password")
+    newPassword = data.get("newPassword")
+    if not newPassword or not password:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = admin.editPassword(password, newPassword, token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        #更新token
+        new_token = None
+        if isinstance(response_data.get("data"), dict):
+            new_token = response_data.get("data").get("token")
+        if new_token:
+            resp = jsonify(response_data)
+            resp.set_cookie("token", new_token)
+            return resp, http_status_code
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling admin.editPassword: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+    
+# === 管理员信息获取 === (20)
+@app.get("/api/background/admin/getInfo")
+def api_admin_getInfo():
+    token,token_error= _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    try:
+        response_data = admin.getInfo(token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling admin.getInfo: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 后台用户信息获取 === (21)
+@app.get("/api/background/user/getUserList")
+def api_background_user_getUserList():
+    token, token_error = _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    try:
+        userName = request.args.get("userName")
+        nickName = request.args.get("nickName")
+        status = request.args.get("status")
+        numPerPage = request.args.get("numPerPage")
+        pageIndex = request.args.get("pageIndex")
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if not userName or not nickName or not status or not numPerPage or not pageIndex:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = bg_user.getUserList(userName, nickName, status, numPerPage, pageIndex, token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling background.user.getUserList: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 后台重置用户密码 === (22)
+@app.post("/api/background/user/retSetPassword")
+def api_background_user_retSetPassword():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token, token_error = _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    userName = data.get("userName")
+    if not userName:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = bg_user.retSetPassword(userName,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling background.user.retSetPassword: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 后台冻结用户账号 === (23)
+@app.post("/api/background/user/freezeAccount")
+def api_background_user_freezeAccount():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token, token_error = _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    userName = data.get("userName")
+    if not userName:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = bg_user.freezeAccount(userName,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling background.user.freezeAccount: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+    
+# === 后台获取档口列表  === (24)
+@app.get("/api/background/food/getStallList")
+def api_background_food_getStallList():
+    token, token_error = _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    try:
+        name = request.args.get("name")
+        type = request.args.get("type")
+        canteen = request.args.get("canteen")
+        numPerPage = request.args.get("numPerPage")
+        pageIndex = request.args.get("pageIndex")
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if not type or not canteen or not name or not numPerPage or not pageIndex:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = bg_food.getStallList(name, type, canteen, numPerPage, pageIndex, token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling background.food.getStallList: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 后台新增档口 === (25)
+@app.post("/api/background/food/addStall")
+def api_background_food_addStall():
+    token, token_error = _extract_token_from_request()
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    name = data.get("name")
+    type = data.get("type")
+    canteen = data.get("canteen")
+    introduction = data.get("introduction")
+    picture = data.get("picture")
+    if not name or not type or not canteen or not introduction or not picture:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = bg_food.addStall(name, type, canteen, introduction, picture, token)
+        http_status_code = 200 
+        if response_data.get("code") != 200:
+            http_status_code = 401 
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling background.food.addStall: {e}") 
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 后台档口信息修改 === (26)
+@app.post("/api/background/food/editStallInfo")
+def api_background_food_editStallInfo():
+    token, token_error = _extract_token_from_request()
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    ID = data.get("ID")
+    name = data.get("name")
+    type = data.get("type")
+    canteen = data.get("canteen")
+    introduction = data.get("introduction")
+    picture = data.get("picture")
+    if not ID or not name or not type or not canteen or not introduction or not picture:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = bg_food.editStallInfo(ID, name, type, canteen, introduction, picture, token)
+        http_status_code = 200 
+        if response_data.get("code") != 200:
+            http_status_code = 401 
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling background.food.editStallInfo: {e}") 
+        return jsonify(code=999, msg="服务器内部错误"), 500
+    
+# === 后台删除档口 === (27)
+@app.post("/api/background/food/deleteStall")
+def api_background_food_deleteStall():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token, token_error = _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    ID = data.get("ID")
+    if not ID:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = bg_food.deleteStall(ID,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling background.food.deleteStall: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+    
+# === 后台获取菜品 === (28)
+@app.get("/api/background/dish/getDishList")
+def api_background_dish_getDishList():
+    token, token_error = _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    try:
+        stallID = request.args.get("stallID")
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if not stallID:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = bg_dish.getDishList(stallID, token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling background.dish.getDishList: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+    
+# === 后台新增菜品 === (29)
+@app.post("/api/background/dish/addDish")
+def api_background_dish_addDish():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token, token_error = _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    stallID = data.get("stallID")
+    name = data.get("name")
+    price = data.get("price")
+    picture = data.get("picture")
+    if not stallID or not name or not price or not picture:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = bg_dish.addDish(stallID,name,price,picture,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling background.dish.addDish: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+    
+# === 后台修改菜品信息 === (30)
+@app.post("/api/background/dish/editDishInfo")
+def api_background_dish_editDishInfo():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token, token_error = _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    ID = data.get("ID")
+    name = data.get("name")
+    price = data.get("price")
+    picture = data.get("picture")
+    if not ID or not name or not price or not picture:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = bg_dish.editDishInfo(ID,name,price,picture,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling background.dish.editDishInfo: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+    
+# === 后台删除菜品 === (31)
+@app.post("/api/background/dish/deleteDish")
+def api_background_dish_deleteDish():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token, token_error = _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    ID = data.get("ID")
+    if not ID:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = bg_dish.deleteDish(ID,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling background.dish.deleteDish: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+    
+# === 后台获取管理员列表 === (32)
+@app.get("/api/background/adminManage/getAdminList")
+def api_background_adminManage_getAdminList():
+    token, token_error = _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    try:
+        adminID = request.args.get("adminID")
+        name = request.args.get("name")
+        permission = request.args.get("permission")
+        numPerPage = request.args.get("numPerPage")
+        pageIndex = request.args.get("pageIndex")
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if not adminID or not name or not permission or not numPerPage or not pageIndex:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = bg_adm.getAdminList(adminID, name, permission, numPerPage, pageIndex, token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling background.adminManage.getAdminList: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 后台重置管理员密码 === (33)
+@app.post("/api/background/adminManage/resetPassword")
+def api_background_adminManage_resetPassword():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token, token_error = _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    ID = data.get("ID")
+    if not ID:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = bg_adm.resetPassword(ID,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling background.adminManage.resetPassword: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+    
+# === 后台删除管理员 === (34)
+@app.post("/api/background/adminManage/deleteAdmin")
+def api_bakcground_adminManage_deleteAdmin():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token, token_error = _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    ID = data.get("ID")
+    if not ID:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = bg_adm.deleteAdmin(ID,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling background.adminManage.deleteAdmin: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+    
+# === 后台新增管理员 === (35)
+@app.post("/api/background/adminManage/addAdmin")
+def api_background_adminManage_addAdmin():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token, token_error = _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    name = data.get("name")
+    if not name:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = bg_adm.addAdmin(name,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling background.adminManage.addAdmin: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
 @app.route("/imgRepo/<path:filename>")
 def get_avatar(filename):
     return send_from_directory(IMGREPO_DIR, filename)

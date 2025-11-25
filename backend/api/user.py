@@ -204,7 +204,7 @@ def editPassword(newPassword, token):
         )
         return {"code": 200,"data":{"token":new_token}}
     else:
-        return {"code":999, "msg":"用户信息修改失败"}
+        return {"code":999, "msg":"用户密码修改失败"}
     
 """ test:
 Invoke-RestMethod -Uri http://127.0.0.1:8000/api/user/getInfo -Method Post -Body '{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyTmFtZSI6ImxqeSIsInBhc3N3b3JkIjoiMTIzNDU2IiwiZXhwIjoxNzYyOTQxNjMyLjkwMDIwMTN9.lxxo4QIhmitZg8WkcVD42TO90Q9nY3MttqSYRbCOJwI"}' -ContentType "application/json"
@@ -283,7 +283,7 @@ def getCommentList(numPerPage, pageIndex, token):
         db.connect()
         offset = (pageIndex_int - 1) * numPerPage_int
         #使用数据库进行查询
-        response = db.execute_query("select sc.ID,s.name as stall_name,s.canteen,sc.dateTime,sc.rating,sc.recommendCount,sc.content,sc.picture1Url,sc.picture2Url,sc.picture3Url from StallComment sc inner join Stall s on sc.stallID = s.ID where sc.userName = %(userName)s order by sc.dateTime desc limit %(limit)s offset %(offset)s",{"userName":userName,"limit": numPerPage_int,"offset": offset})
+        response = db.execute_query("select sc.ID,s.name as stall_name,s.canteen,date_format(sc.dateTime, '%Y-%m-%d %H:%i:%s') as dateTime,sc.rating,sc.recommendCount,sc.content,sc.picture1Url,sc.picture2Url,sc.picture3Url from StallComment sc inner join Stall s on sc.stallID = s.ID where sc.userName = %(userName)s order by sc.dateTime desc limit %(limit)s offset %(offset)s",{"userName":userName,"limit": numPerPage_int,"offset": offset})
         response_rows = db.execute_query("select count(*) as total_rows from StallComment sc inner join Stall s on sc.stallID = s.ID where sc.userName = %(userName)s;", {"userName": userName})
         db.disconnect()
         if response_rows and len(response_rows) > 0:
@@ -326,7 +326,7 @@ def getCommentList(numPerPage, pageIndex, token):
                         "ID": row.get("ID"),
                         "stallName": row.get("stall_name"),
                         "canteen": row.get("canteen"),
-                        "dateTime": row.get("dateTime").isoformat() if row.get("dateTime") else None,
+                        "dateTime": row.get("dateTime"),
                         "rating": float(row.get("rating", 0)),
                         "recommendCount": row.get("recommendCount", 0),
                         "content": row.get("content", ""),
@@ -340,7 +340,7 @@ def getCommentList(numPerPage, pageIndex, token):
                         "ID": row[0] if len(row) > 0 else None,
                         "stallName": row[1] if len(row) > 1 else "",
                         "canteen": row[2] if len(row) > 2 else "",
-                        "dateTime": row[3].isoformat() if len(row) > 3 and row[3] else None,
+                        "dateTime": row[3] if len(row) > 3 else None,
                         "rating": float(row[4]) if len(row) > 4 else 0.0,
                         "recommendCount": row[5] if len(row) > 5 else 0,
                         "content": row[6] if len(row) > 6 else "",

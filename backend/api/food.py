@@ -104,7 +104,7 @@ def getStallList(type_str,canteen,orderBy,collation,numPerPage,pageIndex,token):
         paginated_query = base_query + f" limit {numPerPage_int} offset {offset}"
         # 执行查询
         response = db.execute_query(paginated_query)
-        response_rows = db.execute_query("select count(*) as total_rows from Stall where where type = %(type)s and canteen=%(canteen)s",{"type":type_str,"canteen":canteen})
+        response_rows = db.execute_query("select count(*) as total_rows from Stall where type = %(type)s and canteen=%(canteen)s",{"type":type_str,"canteen":canteen})
 
         db.disconnect()
         total_rows = 0

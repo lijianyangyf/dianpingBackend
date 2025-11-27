@@ -29,7 +29,7 @@ def checkToken(token):
     else:
         return {"code": 997}
     
-#@32 后台获取管理员列表函数(老唐版)
+#@32 后台获取管理员列表函数(老唐版)————OK
 def getAdminList(adminID,name,permission,numPerPage,pageIndex,token):
     db=Database.Database()
     response={}
@@ -109,7 +109,7 @@ def getAdminList(adminID,name,permission,numPerPage,pageIndex,token):
     else:
         return {"code":999, "msg":"管理员列表获取失败"}
     
-#@33 后台重置管理员密码函数(老唐版)
+#@33 后台重置管理员密码函数(老唐版)————OK
 def resetPassword(ID,token):
     db=Database.Database()
     response={}
@@ -135,7 +135,7 @@ def resetPassword(ID,token):
     else:
         return {"code":999, "msg":"管理员密码重置失败"}
     
-#@34 后台删除管理员函数(老唐版)
+#@34 后台删除管理员函数(老唐版)————OK
 def deleteAdmin(ID,token):
     db=Database.Database()
     response={}
@@ -160,7 +160,7 @@ def deleteAdmin(ID,token):
     else:
         return {"code":999, "msg":"管理员删除失败"}
     
-#@35 后台新增管理员函数(老唐版)
+#@35 后台新增管理员函数(老唐版)————OK
 def addAdmin(name,token):
     db=Database.Database()
     response={}
@@ -170,7 +170,7 @@ def addAdmin(name,token):
         if token_check.get("code") != 200:
             return token_check
         db.connect()
-        response = db.execute_query("insert into Admin (password,name,authority) values (%(password)s,%(name)s,普通管理员)",{"password":password,"name":name})
+        response = db.execute_query("insert into Admin (password,name,authority) values (%(password)s,%(name)s,'普通管理员')",{"password":password,"name":name})
         response_id = db.execute_query("select ID from Admin where name=%(name)s and password=%(password)s",{"name":name,"password":password})
         db.disconnect()
         print(response)

@@ -29,13 +29,13 @@ def checkToken(token):
     else:
         return {"code": 997}
 
-#@21 后台用户信息获取函数(老唐版)
+#@21 后台用户信息获取函数(老唐版)————OK
 def getUserList(userName,nickName,status,numPerPage,pageIndex,token):
     db=Database.Database()
     response={}
     userName = str(userName) if userName is not None else ""
     nickName = str(nickName) if nickName is not None else ""
-    status = str(status) if status is not None else ""
+    state = str(status) if status is not None else ""
     numPerPage_int = int(numPerPage)
     pageIndex_int = int(pageIndex)
     numPerPage = str(numPerPage) if numPerPage else "10"
@@ -48,16 +48,16 @@ def getUserList(userName,nickName,status,numPerPage,pageIndex,token):
         where_conditions = []
         if userName and userName != "":
             where_conditions.append(f"userName = '{userName}'")
-        if nickName and nickName != "全部":
+        if nickName and nickName != "":
             where_conditions.append(f"nickName = '{nickName}'")
-        if status and status != "全部":
-            where_conditions.append(f"status = '{status}'")
+        if state and state != "全部":
+            where_conditions.append(f"state = '{state}'")
         where_clause = ""
         if where_conditions:
             where_clause = "where " + " and ".join(where_conditions)
         else:
             where_clause = ""
-        base_query = f"select userName, nickName, status, avatarUrl from User {where_clause}"
+        base_query = f"select userName, nickName, state, avatarUrl from User {where_clause}"
         offset = (pageIndex_int - 1) * numPerPage_int
         paginated_query = base_query + f" limit {numPerPage_int} offset {offset}"
         response = db.execute_query(paginated_query)
@@ -94,7 +94,7 @@ def getUserList(userName,nickName,status,numPerPage,pageIndex,token):
                     user = {
                         "userName": str(row.get("userName")),
                         "nickName": str(row.get("nickName")),
-                        "status": str(row.get("status")),
+                        "status": str(row.get("state")),
                         "avatarUrl": str(row.get("avatarUrl"))
                     }
                 else:
@@ -109,7 +109,7 @@ def getUserList(userName,nickName,status,numPerPage,pageIndex,token):
     else:
         return {"code":999}
     
-#@22 后台重置用户密码函数(老唐版)
+#@22 后台重置用户密码函数(老唐版)————OK
 def retSetPassword(userName, token):
     db=Database.Database()
     response={}
@@ -135,7 +135,7 @@ def retSetPassword(userName, token):
     else:
         return {"code":999, "msg":"用户密码重置失败"}
     
-#@23 后台冻结用户账号函数(老唐版)
+#@23 后台冻结用户账号函数(老唐版)————OK
 def freezeAccount(userName, token):
     db=Database.Database()
     response={}
@@ -144,7 +144,7 @@ def freezeAccount(userName, token):
         if token_check.get("code") != 200:
             return token_check
         db.connect()
-        response = db.execute_query("update User set state=冻结 where userName=%(userName)s",{"userName":userName})
+        response = db.execute_query("update User set state='冻结' where userName=%(userName)s",{"userName":userName})
         db.disconnect()
         print(response)
     except jwt.ExpiredSignatureError:

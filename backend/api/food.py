@@ -261,10 +261,11 @@ def getStallInfo(stallID, token):
                     }
                 dish_list.append(dish)
         # 查询评论列表
-        response_commentList = db.execute_query(
-            "SELECT sc.ID, sc.userName as reviewerName, u.avatarUrl, sc.dateTime, sc.rating, sc.recommendCount as `like`, sc.content, sc.picture1Url, sc.picture2Url, sc.picture3Url FROM StallComment sc INNER JOIN User u ON sc.userName = u.userName WHERE sc.stallID = %(stallID)s ORDER BY sc.dateTime DESC",
-            {"stallID": stallID}
-        )
+        response_commentList = db.execute_query("""SELECT sc.ID, sc.userName as reviewerName, u.avatarUrl, sc.dateTime, sc.rating, 
+            sc.recommendCount as `like`, sc.content, sc.picture1Url, sc.picture2Url, sc.picture3Url,
+            CASE WHEN uc.userName IS NOT NULL THEN 'like' ELSE 'none' END as evaluation FROM StallComment sc 
+            INNER JOIN User u ON sc.userName = u.userName LEFT JOIN UserComment uc ON sc.ID = uc.commentID AND uc.userName = %(current_user)s
+            WHERE sc.stallID = %(stallID)s ORDER BY sc.dateTime DESC""",{"stallID": stallID, "current_user": userName})
         # 处理评论列表
         comment_list = []
         if response_commentList and len(response_commentList) > 0:
@@ -281,7 +282,8 @@ def getStallInfo(stallID, token):
                         "content": comment_row.get("content", ""),
                         "picture1Url": comment_row.get("picture1Url"),
                         "picture2Url": comment_row.get("picture2Url"),
-                        "picture3Url": comment_row.get("picture3Url")
+                        "picture3Url": comment_row.get("picture3Url"),
+                        "evaluation": comment_row.get("evaluation", "none")
                     }
                 else:
                     # 元组格式
@@ -295,7 +297,8 @@ def getStallInfo(stallID, token):
                         "content": comment_row[6] if len(comment_row) > 6 else "",
                         "picture1Url": comment_row[7] if len(comment_row) > 7 else None,
                         "picture2Url": comment_row[8] if len(comment_row) > 8 else None,
-                        "picture3Url": comment_row[9] if len(comment_row) > 9 else None
+                        "picture3Url": comment_row[9] if len(comment_row) > 9 else None,
+                        "evaluation": comment_row[10] if len(comment_row) > 10 else "none"
                     }
                 comment_list.append(comment)
         db.disconnect()
@@ -360,10 +363,13 @@ def getStallCommentList(stallID, numPerPage, pageIndex, token):
         offset = (pageIndex_int - 1) * numPerPage_int
         #使用数据库进行查询
         response = db.execute_query("""
-            select sc.ID, sc.userName as reviewerName, u.avatarUrl, sc.dateTime,
-            sc.rating, sc.recommendCount as `like`, sc.content, sc.picture1Url,
-            sc.picture2Url, sc.picture3Url from StallComment sc inner join User u on sc.userName = u.userName
-            where sc.stallID = %(stallID)s order by sc.dateTime desc limit %(limit)s offset %(offset)s""", {"stallID":stallID,"limit": numPerPage_int,"offset": offset})
+            SELECT sc.ID, sc.userName as reviewerName, u.avatarUrl, sc.dateTime, sc.rating, sc.recommendCount as `like`, sc.content, sc.picture1Url,
+            sc.picture2Url, sc.picture3Url, CASE WHEN uc.userName IS NOT NULL THEN 'like' ELSE 'none' END as evaluation
+            FROM StallComment sc INNER JOIN User u ON sc.userName = u.userName
+            LEFT JOIN UserComment uc ON sc.ID = uc.commentID AND uc.userName = %(current_user)s
+            WHERE sc.stallID = %(stallID)s ORDER BY sc.dateTime DESC LIMIT %(limit)s OFFSET %(offset)s""", 
+            {"stallID": stallID,"current_user": userName,"limit": numPerPage_int,"offset": offset}
+        )
         response_rows = db.execute_query("""
             select count(*) as comment_count from StallComment sc inner 
             join User u on sc.userName = u.userName
@@ -406,7 +412,8 @@ def getStallCommentList(stallID, numPerPage, pageIndex, token):
                             "content": row.get("content", ""),
                             "picture1Url": row.get("picture1Url"),
                             "picture2Url": row.get("picture2Url"),
-                            "picture3Url": row.get("picture3Url")
+                            "picture3Url": row.get("picture3Url"),
+                            "evaluation": row.get("evaluation", "none")
                         }
                     else:
                     # 元组格式
@@ -420,7 +427,8 @@ def getStallCommentList(stallID, numPerPage, pageIndex, token):
                             "content": row[6] if len(row) > 6 else "",
                             "picture1Url": row[7] if len(row) > 7 else None,
                             "picture2Url": row[8] if len(row) > 8 else None,
-                            "picture3Url": row[9] if len(row) > 9 else None
+                            "picture3Url": row[9] if len(row) > 9 else None,
+                            "evaluation": row[10] if len(row) > 10 else "none"
                         }
                     commentList.append(comment)
             return {"code":200, "data": {"commentList":commentList, "totalPageNum":totalPageNum, "pageIndex":pageIndex, "token": token}}

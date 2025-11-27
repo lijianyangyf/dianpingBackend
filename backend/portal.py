@@ -24,6 +24,7 @@ IMGREPO_DIR = os.path.normpath(os.path.join(BASE_DIR, "../imgRepo"))
 
 # 创建 Flask 应用；static_url_path 设为空字符串，允许直接以 /assets/... 等路径访问静态文件
 app = Flask(__name__, static_folder=DIST_DIR, static_url_path="")
+app.config['JSON_AS_ASCII'] = False
 
 # 前端 SPA 的入口文件
 INDEX_FILE = "home.html"  # frontend/dist/home.html
@@ -582,7 +583,7 @@ def api_background_user_getUserList():
         pageIndex = request.args.get("pageIndex")
     except Exception as e:
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
-    if not userName or not nickName or not status or not numPerPage or not pageIndex:
+    if userName is None or nickName is None or not status or not numPerPage or not pageIndex:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
         response_data = bg_user.getUserList(userName, nickName, status, numPerPage, pageIndex, token)
@@ -658,7 +659,7 @@ def api_background_food_getStallList():
         pageIndex = request.args.get("pageIndex")
     except Exception as e:
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
-    if not type or not canteen or not name or not numPerPage or not pageIndex:
+    if not type or not canteen or name is None or not numPerPage or not pageIndex:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
         response_data = bg_food.getStallList(name, type, canteen, numPerPage, pageIndex, token)
@@ -674,23 +675,18 @@ def api_background_food_getStallList():
 @app.post("/api/background/food/addStall")
 def api_background_food_addStall():
     token, token_error = _extract_token_from_request()
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    except Exception as e:
-        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if not token:
         return jsonify(code=997, msg=token_error), 401
-    name = data.get("name")
-    type = data.get("type")
-    canteen = data.get("canteen")
-    introduction = data.get("introduction")
-    picture = data.get("picture")
-    if not name or not type or not canteen or not introduction or not picture:
+    name = request.form.get("name")
+    stall_type  = request.form.get("type")
+    canteen = request.form.get("canteen")
+    introduction = request.form.get("introduction")
+    picture = request.files.get("picture")
+    if not name or not stall_type  or not canteen or not introduction or not picture:
         return jsonify(code=999, msg="参数不完整"), 400
+    print(f"name: {name}, type: {type(name)}")
     try:
-        response_data = bg_food.addStall(name, type, canteen, introduction, picture, token)
+        response_data = bg_food.addStall(name, stall_type , canteen, introduction, picture, token)
         http_status_code = 200 
         if response_data.get("code") != 200:
             http_status_code = 401 
@@ -703,21 +699,15 @@ def api_background_food_addStall():
 @app.post("/api/background/food/editStallInfo")
 def api_background_food_editStallInfo():
     token, token_error = _extract_token_from_request()
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
-    except Exception as e:
-        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if not token:
         return jsonify(code=997, msg=token_error), 401
-    ID = data.get("ID")
-    name = data.get("name")
-    type = data.get("type")
-    canteen = data.get("canteen")
-    introduction = data.get("introduction")
-    picture = data.get("picture")
-    if not ID or not name or not type or not canteen or not introduction or not picture:
+    ID = request.form.get("ID")
+    name = request.form.get("name")
+    type = request.form.get("type")
+    canteen = request.form.get("canteen")
+    introduction = request.form.get("introduction")
+    picture = request.files.get("picture")
+    if not name or not type or not canteen or not introduction or not picture:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
         response_data = bg_food.editStallInfo(ID, name, type, canteen, introduction, picture, token)
@@ -788,10 +778,10 @@ def api_background_dish_addDish():
     token, token_error = _extract_token_from_request()
     if not token:
         return jsonify(code=997, msg=token_error), 401
-    stallID = data.get("stallID")
-    name = data.get("name")
-    price = data.get("price")
-    picture = data.get("picture")
+    stallID = request.form.get("stallID")
+    name = request.form.get("name")
+    price = request.form.get("price")
+    picture = request.files.get("picture")
     if not stallID or not name or not price or not picture:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
@@ -807,19 +797,13 @@ def api_background_dish_addDish():
 # === 后台修改菜品信息 === (30)
 @app.post("/api/background/dish/editDishInfo")
 def api_background_dish_editDishInfo():
-    try:
-        data = request.get_json()
-    except Exception as e:
-        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
-    if data is None:
-        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
     token, token_error = _extract_token_from_request()
     if not token:
         return jsonify(code=997, msg=token_error), 401
-    ID = data.get("ID")
-    name = data.get("name")
-    price = data.get("price")
-    picture = data.get("picture")
+    ID = request.form.get("ID")
+    name = request.form.get("name")
+    price = request.form.get("price")
+    picture = request.files.get("picture")
     if not ID or not name or not price or not picture:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
@@ -871,7 +855,7 @@ def api_background_adminManage_getAdminList():
         pageIndex = request.args.get("pageIndex")
     except Exception as e:
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
-    if not adminID or not name or not permission or not numPerPage or not pageIndex:
+    if adminID is None or name is None or permission is None or not numPerPage or not pageIndex:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
         response_data = bg_adm.getAdminList(adminID, name, permission, numPerPage, pageIndex, token)

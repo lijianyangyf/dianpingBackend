@@ -8,29 +8,33 @@ algorithm = "HS256"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 IMGREPO_DIR = os.path.normpath(os.path.join(BASE_DIR, "../../imgRepo"))
 
-#@16 校验管理员token函数(老唐版)
+#@16 校验管理员token函数(老唐版)————OK
 def checkToken(token):
-    db=Database.Database()
-    response={}
-    ID=""
-    password=""
+    db = Database.Database()
     try:
         payload = jwt.decode(token, secret_key, algorithms=[algorithm])
         ID = payload.get("ID")
         password = payload.get("password")
         db.connect()
-        with Database.Redislock(Database.rcli,f"admin:{ID}"):
-            response=db.execute_query("select * from Admin where ID=%(ID)s and password=%(password)s",{"ID":ID,"password":password})
+        response = db.execute_query("select * from Admin where ID=%(ID)s and password=%(password)s", {"ID": ID, "password": password})
         db.disconnect()
+    except jwt.ExpiredSignatureError as e:
+        print(f"Token 过期: {e}")
+        return {"code": 997, "msg": "Token 已过期"}
+    except jwt.InvalidTokenError as e:
+        print(f"Token 无效: {e}")
+        return {"code": 997, "msg": "Token 无效"}
     except Exception as e:
-        print(e)
-        raise
-    if response is not None:
+        print(f"其他错误: {e}")
+        return {"code": 997, "msg": f"服务器错误: {str(e)}"}
+    if response and len(response) > 0:
+        print("验证成功")
         return {"code": 200}
     else:
-        return {"code": 997}
+        print("验证失败")
+        return {"code": 997, "msg": "用户不存在或密码错误"}
     
-#@17 管理员登录函数(老唐版)
+#@17 管理员登录函数(老唐版)————OK
 def login(ID,password):
     db=Database.Database()
     db.connect()
@@ -52,7 +56,7 @@ def login(ID,password):
     else:
         return {"code": 999, "msg": "用户不存在|密码错误"}
     
-#@18 管理员信息修改函数(老唐版)
+#@18 管理员信息修改函数(老唐版)————not yet
 def editInfo(name,avatar,token):
     db = Database.Database()
     response = {}
@@ -96,7 +100,7 @@ def editInfo(name,avatar,token):
     else:
         return {"code":999, "msg":"管理员信息修改失败"}
 
-#@19 管理员密码修改函数(老唐版)
+#@19 管理员密码修改函数(老唐版)————OK
 def editPassword(password,newPassword,token):
     db=Database.Database()
     response={}
@@ -136,7 +140,7 @@ def editPassword(password,newPassword,token):
     else:
         return {"code":999, "msg":"用户密码修改失败"}
 
-#@20 管理员信息获取函数(老唐版)
+#@20 管理员信息获取函数(老唐版)————OK
 def getInfo(token):
     db = Database.Database()
     response={}
@@ -148,7 +152,7 @@ def getInfo(token):
         payload = jwt.decode(token, secret_key, algorithms=[algorithm])
         ID = payload.get("ID")
         db.connect()
-        response = db.execute_query("select ID, name, permission, avatarUrl from Admin where ID=%(ID)s",{"ID":ID})
+        response = db.execute_query("select ID, name, authority as permission, avatarUrl from Admin where ID=%(ID)s",{"ID":ID})
         db.disconnect()
         print(response)
     except jwt.ExpiredSignatureError:

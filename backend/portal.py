@@ -340,7 +340,7 @@ def app_food_getStallCommentList():
     try:
         stallID = request.args.get("stallID")
         numPerPage = request.args.get("numPerPage")
-        pageIndex = request.args.get("stallID")
+        pageIndex = request.args.get("pageIndex")
     except Exception as e:
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
     if not stallID or not numPerPage or not pageIndex:
@@ -769,12 +769,6 @@ def api_background_dish_getDishList():
 # === 后台新增菜品 === (29)
 @app.post("/api/background/dish/addDish")
 def api_background_dish_addDish():
-    try:
-        data = request.get_json()
-    except Exception as e:
-        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
-    if data is None:
-        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
     token, token_error = _extract_token_from_request()
     if not token:
         return jsonify(code=997, msg=token_error), 401

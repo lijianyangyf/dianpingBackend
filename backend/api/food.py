@@ -97,14 +97,14 @@ def getStallList(type_str,canteen,orderBy,collation,numPerPage,pageIndex,token):
         else:
             where_clause = ""  # 如果没有条件，则没有 WHERE 子句
         # 构建完整的 SQL 查询
-        base_query = f"select ID, name, rating, meanPrice, canteen, signatureDish, pictureUrl from Stall {where_clause} order by {orderBy} {collation}"
+        base_query = f"select ID, name, rating, meanPrice, type, canteen, signatureDish, pictureUrl from Stall {where_clause} order by {orderBy} {collation}"
         # 计算分页偏移量
         offset = (pageIndex_int - 1) * numPerPage_int
         # 添加分页限制
         paginated_query = base_query + f" limit {numPerPage_int} offset {offset}"
         # 执行查询
         response = db.execute_query(paginated_query)
-        response_rows = db.execute_query("select count(*) as total_rows from Stall where where type = %(type)s and canteen=%(canteen)s",{"type":type_str,"canteen":canteen})
+        response_rows = db.execute_query("select count(*) as total_rows from Stall where type = %(type)s and canteen=%(canteen)s",{"type":type_str,"canteen":canteen})
 
         db.disconnect()
         total_rows = 0
@@ -153,6 +153,7 @@ def getStallList(type_str,canteen,orderBy,collation,numPerPage,pageIndex,token):
                         "name": row.get("name"),
                         "rating": float(row.get("rating", 0)),
                         "meanPrice": float(row.get("meanPrice", 0)),
+                        "type": row.get("type"),
                         "canteen": row.get("canteen"),
                         "signatureDish": row.get("signatureDish"),
                         "pictureUrl": row.get("pictureUrl")
@@ -164,9 +165,10 @@ def getStallList(type_str,canteen,orderBy,collation,numPerPage,pageIndex,token):
                         "name": row[1] if len(row) > 1 else "",
                         "rating": float(row[2]) if len(row) > 2 and row[2] is not None else 0.0,
                         "meanPrice": float(row[3]) if len(row) > 3 and row[3] is not None else 0.0,
-                        "canteen": row[4] if len(row) > 4 else "",
-                        "signatureDish": row[5] if len(row) > 5 else "",
-                        "pictureUrl": row[6] if len(row) > 6 else None
+                        "type": row[4] if len(row) > 4 else "",
+                        "canteen": row[5] if len(row) > 5 else "",
+                        "signatureDish": row[6] if len(row) > 6 else "",
+                        "pictureUrl": row[7] if len(row) > 7 else None
                     }
                 stalls.append(stall)
         return {"code":200, "data": {"stalls":stalls, "totalPageNum":totalPageNum, "pageIndex":pageIndex, "token": token}}
@@ -261,10 +263,11 @@ def getStallInfo(stallID, token):
                     }
                 dish_list.append(dish)
         # 查询评论列表
-        response_commentList = db.execute_query(
-            "SELECT sc.ID, sc.userName as reviewerName, u.avatarUrl, sc.dateTime, sc.rating, sc.recommendCount as `like`, sc.content, sc.picture1Url, sc.picture2Url, sc.picture3Url FROM StallComment sc INNER JOIN User u ON sc.userName = u.userName WHERE sc.stallID = %(stallID)s ORDER BY sc.dateTime DESC",
-            {"stallID": stallID}
-        )
+        response_commentList = db.execute_query("""SELECT sc.ID, sc.userName as reviewerName, u.avatarUrl, sc.dateTime, sc.rating, 
+            sc.recommendCount as `like`, sc.content, sc.picture1Url, sc.picture2Url, sc.picture3Url,
+            CASE WHEN uc.userName IS NOT NULL THEN 'like' ELSE 'none' END as evaluation FROM StallComment sc 
+            INNER JOIN User u ON sc.userName = u.userName LEFT JOIN UserComment uc ON sc.ID = uc.commentID AND uc.userName = %(current_user)s
+            WHERE sc.stallID = %(stallID)s ORDER BY sc.dateTime DESC""",{"stallID": stallID, "current_user": userName})
         # 处理评论列表
         comment_list = []
         if response_commentList and len(response_commentList) > 0:
@@ -281,7 +284,8 @@ def getStallInfo(stallID, token):
                         "content": comment_row.get("content", ""),
                         "picture1Url": comment_row.get("picture1Url"),
                         "picture2Url": comment_row.get("picture2Url"),
-                        "picture3Url": comment_row.get("picture3Url")
+                        "picture3Url": comment_row.get("picture3Url"),
+                        "evaluation": comment_row.get("evaluation", "none")
                     }
                 else:
                     # 元组格式
@@ -295,7 +299,8 @@ def getStallInfo(stallID, token):
                         "content": comment_row[6] if len(comment_row) > 6 else "",
                         "picture1Url": comment_row[7] if len(comment_row) > 7 else None,
                         "picture2Url": comment_row[8] if len(comment_row) > 8 else None,
-                        "picture3Url": comment_row[9] if len(comment_row) > 9 else None
+                        "picture3Url": comment_row[9] if len(comment_row) > 9 else None,
+                        "evaluation": comment_row[10] if len(comment_row) > 10 else "none"
                     }
                 comment_list.append(comment)
         db.disconnect()
@@ -360,10 +365,13 @@ def getStallCommentList(stallID, numPerPage, pageIndex, token):
         offset = (pageIndex_int - 1) * numPerPage_int
         #使用数据库进行查询
         response = db.execute_query("""
-            select sc.ID, sc.userName as reviewerName, u.avatarUrl, sc.dateTime,
-            sc.rating, sc.recommendCount as `like`, sc.content, sc.picture1Url,
-            sc.picture2Url, sc.picture3Url from StallComment sc inner join User u on sc.userName = u.userName
-            where sc.stallID = %(stallID)s order by sc.dateTime desc limit %(limit)s offset %(offset)s""", {"stallID":stallID,"limit": numPerPage_int,"offset": offset})
+            SELECT sc.ID, sc.userName as reviewerName, u.avatarUrl, sc.dateTime, sc.rating, sc.recommendCount as `like`, sc.content, sc.picture1Url,
+            sc.picture2Url, sc.picture3Url, CASE WHEN uc.userName IS NOT NULL THEN 'like' ELSE 'none' END as evaluation
+            FROM StallComment sc INNER JOIN User u ON sc.userName = u.userName
+            LEFT JOIN UserComment uc ON sc.ID = uc.commentID AND uc.userName = %(current_user)s
+            WHERE sc.stallID = %(stallID)s ORDER BY sc.dateTime DESC LIMIT %(limit)s OFFSET %(offset)s""", 
+            {"stallID": stallID,"current_user": userName,"limit": numPerPage_int,"offset": offset}
+        )
         response_rows = db.execute_query("""
             select count(*) as comment_count from StallComment sc inner 
             join User u on sc.userName = u.userName
@@ -406,7 +414,8 @@ def getStallCommentList(stallID, numPerPage, pageIndex, token):
                             "content": row.get("content", ""),
                             "picture1Url": row.get("picture1Url"),
                             "picture2Url": row.get("picture2Url"),
-                            "picture3Url": row.get("picture3Url")
+                            "picture3Url": row.get("picture3Url"),
+                            "evaluation": row.get("evaluation", "none")
                         }
                     else:
                     # 元组格式
@@ -420,7 +429,8 @@ def getStallCommentList(stallID, numPerPage, pageIndex, token):
                             "content": row[6] if len(row) > 6 else "",
                             "picture1Url": row[7] if len(row) > 7 else None,
                             "picture2Url": row[8] if len(row) > 8 else None,
-                            "picture3Url": row[9] if len(row) > 9 else None
+                            "picture3Url": row[9] if len(row) > 9 else None,
+                            "evaluation": row[10] if len(row) > 10 else "none"
                         }
                     commentList.append(comment)
             return {"code":200, "data": {"commentList":commentList, "totalPageNum":totalPageNum, "pageIndex":pageIndex, "token": token}}
@@ -525,8 +535,10 @@ def evaluationComment(commentID, newEvaluation, token):
         if newEvaluation=="like" :
             #如果是like且没有评价过，则插入一条记录，并将评论的推荐数加1；否则pass
             if not response_search or len(response_search) == 0:
-                response = db.execute_query("insert into UserComment (userName, commentID) values (%(userName)s,%(commentID)s",
-                    {"userName":userName,"commentID":commentID})
+                response = db.execute_query(
+                    "insert into UserComment (userName, commentID) values (%(userName)s, %(commentID)s)",
+                    {"userName": userName, "commentID": commentID}
+                )
                 response_add_like = db.execute_query("update StallComment set recommendCount = recommendCount + 1 where ID = %(commentID)s",{"commentID":commentID})
                 print(f"点赞操作 - 插入: {response}, 更新: {response_add_like}")
                 if (response and isinstance(response, dict) and response.get("rowcount", 0) > 0 and

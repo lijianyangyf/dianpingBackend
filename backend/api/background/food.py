@@ -29,7 +29,7 @@ def checkToken(token):
     else:
         return {"code": 997}
 
-#@24 后台获取档口列表函数(老唐版)
+#@24 后台获取档口列表函数(老唐版)————OK
 def getStallList(name,type,canteen,numPerPage,pageIndex,token):
     db=Database.Database()
     response={}
@@ -57,7 +57,7 @@ def getStallList(name,type,canteen,numPerPage,pageIndex,token):
             where_clause = "where " + " and ".join(where_conditions)
         else:
             where_clause = ""
-        base_query = f"select ID, name, rating, meanPrice, canteen, signatureDish, pictureUrl from Stall {where_clause}"
+        base_query = f"select ID, name, rating, meanPrice, canteen, signatureDish, pictureUrl, type, introduction from Stall {where_clause}"
         offset = (pageIndex_int - 1) * numPerPage_int
         paginated_query = base_query + f" limit {numPerPage_int} offset {offset}"
         response = db.execute_query(paginated_query)
@@ -98,7 +98,9 @@ def getStallList(name,type,canteen,numPerPage,pageIndex,token):
                         "meanPrice": float(row.get("meanPrice", 0)),
                         "canteen": row.get("canteen"),
                         "signatureDish": row.get("signatureDish"),
-                        "pictureUrl": row.get("pictureUrl")
+                        "pictureUrl": row.get("pictureUrl"),
+                        "type": row.get("type"),
+                        "introduction": row.get("introduction")
                     }
                 else:
                     stall = {
@@ -108,7 +110,9 @@ def getStallList(name,type,canteen,numPerPage,pageIndex,token):
                         "meanPrice": float(row[3]) if len(row) > 3 and row[3] is not None else 0.0,
                         "canteen": row[4] if len(row) > 4 else "",
                         "signatureDish": row[5] if len(row) > 5 else "",
-                        "pictureUrl": row[6] if len(row) > 6 else ""
+                        "pictureUrl": row[6] if len(row) > 6 else "",
+                        "type": row[7] if len(row) > 7 else "",
+                        "introduction": row[8] if len(row) > 8 else ""
                     }
                 stallList.append(stall)
         return {"code":200, "data": {"stallList":stallList, "totalPageNum":int(totalPageNum), "pageIndex":int(pageIndex)}}
@@ -123,13 +127,20 @@ def addStall(name,type,canteen,introduction,picture,token):
         token_check = checkToken(token)
         if token_check.get("code") != 200:
             return token_check
-        if picture:
-            saveUrl = os.path.join(IMGREPO_DIR, f"{name}_picture.png")
+        os.makedirs(IMGREPO_DIR, exist_ok=True)
+        if picture and hasattr(picture, 'filename') and picture.filename:
+            import re
+            file_extension = os.path.splitext(picture.filename)[1] if '.' in picture.filename else '.png'
+            safe_name = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fff]', '_', name)
+            filename = f"stall_{safe_name}_picture{file_extension}"
+            saveUrl = os.path.join(IMGREPO_DIR, filename)
             picture.save(saveUrl)
-            pictureUrl = f"/imgRepo/{name}_picture.png"
+            pictureUrl = f"/imgRepo/{filename}"
+        else:
+            return {"code": 999, "msg": "图片文件无效"}
         db.connect()
-        response = db.execute_query("insert into Stall (name,type,canteen,introduction,pictureUrl) values (%(name)s,%(type)s,%(canteen)s,%(introduction)s,%(pictureUrl)s)",
-            {"name":name,"type":type,"canteen":canteen,"introduction":introduction,"pictureUrl":pictureUrl})
+        response = db.execute_query("insert into Stall (name,type,rating,canteen,introduction,pictureUrl,meanPrice) values (%(name)s,%(type)s,%(rating)s,%(canteen)s,%(introduction)s,%(pictureUrl)s,%(meanPrice)s)",
+            {"name":name,"type":type,"rating":5.0,"canteen":canteen,"introduction":introduction,"pictureUrl":pictureUrl,"meanPrice":0.0})
         db.disconnect()
         print(response)
     except jwt.ExpiredSignatureError:
@@ -153,10 +164,17 @@ def editStallInfo(ID,name,type,canteen,introduction,picture,token):
         token_check = checkToken(token)
         if token_check.get("code") != 200:
             return token_check
-        if picture:
-            saveUrl = os.path.join(IMGREPO_DIR, f"Stall_{name}_picture.png")
+        os.makedirs(IMGREPO_DIR, exist_ok=True)
+        if picture and hasattr(picture, 'filename') and picture.filename:
+            import re
+            file_extension = os.path.splitext(picture.filename)[1] if '.' in picture.filename else '.png'
+            safe_name = re.sub(r'[^a-zA-Z0-9\u4e00-\u9fff]', '_', name)
+            filename = f"stall_{safe_name}_picture{file_extension}"
+            saveUrl = os.path.join(IMGREPO_DIR, filename)
             picture.save(saveUrl)
-            pictureUrl = f"/imgRepo/Stall_{name}_picture.png"
+            pictureUrl = f"/imgRepo/{filename}"
+        else:
+            return {"code": 999, "msg": "图片文件无效"}
         db.connect()
         response = db.execute_query("update Stall set name=%(name)s,type=%(type)s,canteen=%(canteen)s,introduction=%(introduction)s,pictureUrl=%(pictureUrl)s where ID=%(ID)s",
             {"name":name,"type":type,"canteen":canteen,"introduction":introduction,"pictureUrl":pictureUrl,"ID":ID})
@@ -175,7 +193,7 @@ def editStallInfo(ID,name,type,canteen,introduction,picture,token):
     else:
         return {"code":999, "msg":"档口信息修改失败"}
 
-#@27 后台删除档口函数(老唐版)
+#@27 后台删除档口函数(老唐版)————OK
 def deleteStall(ID,token):
     db=Database.Database()
     response={}
@@ -188,7 +206,7 @@ def deleteStall(ID,token):
             {"stallID": ID})
         db.execute_query("delete from StallComment where stallID = %(stallID)s",
             {"stallID": ID})
-        db.execute_query("delete de from DishEvaluation de inner join Dish d on de.dishID = d.ID where d.stallID = %(stallID)s""",
+        db.execute_query("delete de from DishEvaluation de inner join Dish d on de.dishID = d.ID where d.stallID = %(stallID)s",
             {"stallID": ID})
         db.execute_query("delete from Dish where stallID = %(stallID)s",
             {"stallID": ID})

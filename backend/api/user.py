@@ -85,8 +85,8 @@ def signUp(userName, nickName, password):
         #db.disconnect()
         #return {"code": 999, "msg": "用户名已存在"}
     response = db.execute_query(
-        "insert into User (userName,nickName,password) values (%(userName)s,%(nickName)s,%(password)s)",
-        {"userName": userName, "nickName": nickName, "password": password}
+        "insert into User (userName,nickName,password,state) values (%(userName)s,%(nickName)s,%(password)s,%(state)s)",
+        {"userName": userName, "nickName": nickName, "password": password, "state": "启用"}
     )
     db.disconnect()
     print(response)
@@ -105,7 +105,7 @@ def signUp(userName, nickName, password):
     if isinstance(response, dict) and response.get("rowcount", 0) > 0:
         return {"code": 200, "data": {"token": token}}
     else:
-        return {"code": 888, "msg": "用户注册失败"}
+        return {"code": 999, "msg": "用户注册失败"}
     
 #@4 用户信息修改函数(老唐版)————测试成功
 """ test:
@@ -164,7 +164,7 @@ Invoke-RestMethod -Uri http://127.0.0.1:8000/api/user/editPassword -Method Post 
 """
 
 #@5 用户密码修改函数(老唐版)————测试成功
-def editPassword(newPassword, token):
+def editPassword(password, newPassword, token):
     db=Database.Database()
     response={}
     userName=""
@@ -176,12 +176,15 @@ def editPassword(newPassword, token):
         # 解码 token 获取用户名
         payload = jwt.decode(token, secret_key, algorithms=[algorithm])
         userName = payload.get("userName")
-        password = payload.get("password")    
-        db.connect()
-        #使用数据库进行更新
-        response = db.execute_query("update User set password=%(newPassword)s where userName=%(userName)s",{"newPassword": newPassword, "userName": userName})
-        db.disconnect()
-        print(response)
+        userpassword = payload.get("password")
+        if password == userpassword:
+            db.connect()
+            #使用数据库进行更新
+            response = db.execute_query("update User set password=%(newPassword)s where userName=%(userName)s",{"newPassword": newPassword, "userName": userName})
+            db.disconnect()
+            print(response)
+        else:
+            return {"code":999, "msg":"原密码错误"}
     #若token出现问题
     except jwt.ExpiredSignatureError:
         return {"code": 999, "msg": "Token 已过期"}
@@ -328,7 +331,7 @@ def getCommentList(numPerPage, pageIndex, token):
                         "canteen": row.get("canteen"),
                         "dateTime": row.get("dateTime"),
                         "rating": float(row.get("rating", 0)),
-                        "recommendCount": row.get("recommendCount", 0),
+                        "like": row.get("recommendCount", 0),
                         "content": row.get("content", ""),
                         "picture1Url": row.get("picture1Url"),
                         "picture2Url": row.get("picture2Url"),
@@ -342,7 +345,7 @@ def getCommentList(numPerPage, pageIndex, token):
                         "canteen": row[2] if len(row) > 2 else "",
                         "dateTime": row[3] if len(row) > 3 else None,
                         "rating": float(row[4]) if len(row) > 4 else 0.0,
-                        "recommendCount": row[5] if len(row) > 5 else 0,
+                        "like": row[5] if len(row) > 5 else 0,
                         "content": row[6] if len(row) > 6 else "",
                         "picture1Url": row[7] if len(row) > 7 else None,
                         "picture2Url": row[8] if len(row) > 8 else None,

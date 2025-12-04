@@ -110,7 +110,7 @@ def getUserList(userName,nickName,status,numPerPage,pageIndex,token):
         return {"code":999}
     
 #@22 后台重置用户密码函数(老唐版)————OK
-def retSetPassword(userName, token):
+def resetPassword(userName, token):
     db=Database.Database()
     response={}
     newPassword = "123456"

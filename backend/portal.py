@@ -194,11 +194,12 @@ def api_user_editPassword():
     token, token_error = _extract_token_from_request()
     if not token:
         return jsonify(code=998, msg=token_error), 401
+    password = data.get("password")
     newPassword = data.get("newPassword")
     if not newPassword:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
-        response_data = user.editPassword(newPassword, token)
+        response_data = user.editPassword(password, newPassword, token)
         http_status_code = 200
         if response_data.get("code") != 200:
             http_status_code = 401
@@ -370,13 +371,14 @@ def app_food_createStallComment():
     stallID = data.get("stallID")
     rating = data.get("rating")
     content = data.get("content")
-    pictrue1Url = data.get("pictrue1Url")
+    picture1Url = data.get("picture1Url")
     picture2Url = data.get("picture2Url")
     picture3Url = data.get("picture3Url")
-    if not stallID or not rating or not content or not pictrue1Url or not picture2Url or not picture3Url:
+    # picture1/2/3 可选；仅强制要求 stallID, rating, content
+    if not stallID or not rating or not content:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
-        response_data = food.createStallComment(stallID, rating, content, pictrue1Url, picture2Url, picture3Url, token)
+        response_data = food.createStallComment(stallID, rating, content, picture1Url, picture2Url, picture3Url, token)
         http_status_code = 200
         if response_data.get("code") != 200:
             http_status_code = 401
@@ -596,8 +598,8 @@ def api_background_user_getUserList():
         return jsonify(code=999, msg="服务器内部错误"), 500
 
 # === 后台重置用户密码 === (22)
-@app.post("/api/background/user/retSetPassword")
-def api_background_user_retSetPassword():
+@app.post("/api/background/user/resetPassword")
+def api_background_user_resetPassword():
     try:
         data = request.get_json()
     except Exception as e:
@@ -611,13 +613,13 @@ def api_background_user_retSetPassword():
     if not userName:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
-        response_data = bg_user.retSetPassword(userName,token)
+        response_data = bg_user.resetPassword(userName,token)
         http_status_code = 200
         if response_data.get("code") != 200:
             http_status_code = 401
         return jsonify(response_data), http_status_code
     except Exception as e:
-        print(f"Error calling background.user.retSetPassword: {e}")
+        print(f"Error calling background.user.resetPassword: {e}")
         return jsonify(code=999, msg="服务器内部错误"), 500
 
 # === 后台冻结用户账号 === (23)

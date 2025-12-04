@@ -97,7 +97,7 @@ def getStallList(type_str,canteen,orderBy,collation,numPerPage,pageIndex,token):
         else:
             where_clause = ""  # 如果没有条件，则没有 WHERE 子句
         # 构建完整的 SQL 查询
-        base_query = f"select ID, name, rating, meanPrice, canteen, signatureDish, pictureUrl from Stall {where_clause} order by {orderBy} {collation}"
+        base_query = f"select ID, name, rating, meanPrice, type, canteen, signatureDish, pictureUrl from Stall {where_clause} order by {orderBy} {collation}"
         # 计算分页偏移量
         offset = (pageIndex_int - 1) * numPerPage_int
         # 添加分页限制
@@ -153,6 +153,7 @@ def getStallList(type_str,canteen,orderBy,collation,numPerPage,pageIndex,token):
                         "name": row.get("name"),
                         "rating": float(row.get("rating", 0)),
                         "meanPrice": float(row.get("meanPrice", 0)),
+                        "type": row.get("type"),
                         "canteen": row.get("canteen"),
                         "signatureDish": row.get("signatureDish"),
                         "pictureUrl": row.get("pictureUrl")
@@ -164,9 +165,10 @@ def getStallList(type_str,canteen,orderBy,collation,numPerPage,pageIndex,token):
                         "name": row[1] if len(row) > 1 else "",
                         "rating": float(row[2]) if len(row) > 2 and row[2] is not None else 0.0,
                         "meanPrice": float(row[3]) if len(row) > 3 and row[3] is not None else 0.0,
-                        "canteen": row[4] if len(row) > 4 else "",
-                        "signatureDish": row[5] if len(row) > 5 else "",
-                        "pictureUrl": row[6] if len(row) > 6 else None
+                        "type": row[4] if len(row) > 4 else "",
+                        "canteen": row[5] if len(row) > 5 else "",
+                        "signatureDish": row[6] if len(row) > 6 else "",
+                        "pictureUrl": row[7] if len(row) > 7 else None
                     }
                 stalls.append(stall)
         return {"code":200, "data": {"stalls":stalls, "totalPageNum":totalPageNum, "pageIndex":pageIndex, "token": token}}
@@ -533,8 +535,10 @@ def evaluationComment(commentID, newEvaluation, token):
         if newEvaluation=="like" :
             #如果是like且没有评价过，则插入一条记录，并将评论的推荐数加1；否则pass
             if not response_search or len(response_search) == 0:
-                response = db.execute_query("insert into UserComment (userName, commentID) values (%(userName)s,%(commentID)s",
-                    {"userName":userName,"commentID":commentID})
+                response = db.execute_query(
+                    "insert into UserComment (userName, commentID) values (%(userName)s, %(commentID)s)",
+                    {"userName": userName, "commentID": commentID}
+                )
                 response_add_like = db.execute_query("update StallComment set recommendCount = recommendCount + 1 where ID = %(commentID)s",{"commentID":commentID})
                 print(f"点赞操作 - 插入: {response}, 更新: {response_add_like}")
                 if (response and isinstance(response, dict) and response.get("rowcount", 0) > 0 and

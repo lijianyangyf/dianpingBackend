@@ -359,21 +359,15 @@ def app_food_getStallCommentList():
 # === 发表档口评论 === (12)
 @app.post("/api/food/createStallComment")
 def app_food_createStallComment():
-    try:
-        data = request.get_json()
-    except Exception as e:
-        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
-    if data is None:
-        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
     token, token_error = _extract_token_from_request()
     if not token:
         return jsonify(code=998, msg=token_error), 401
-    stallID = data.get("stallID")
-    rating = data.get("rating")
-    content = data.get("content")
-    picture1Url = data.get("picture1Url")
-    picture2Url = data.get("picture2Url")
-    picture3Url = data.get("picture3Url")
+    stallID = request.form.get("stallID")
+    rating = request.form.get("rating")
+    content = request.form.get("content")
+    picture1Url = request.files.get("picture1Url")
+    picture2Url = request.files.get("picture2Url")
+    picture3Url = request.files.get("picture3Url")
     # picture1/2/3 可选；仅强制要求 stallID, rating, content
     if not stallID or not rating or not content:
         return jsonify(code=999, msg="参数不完整"), 400

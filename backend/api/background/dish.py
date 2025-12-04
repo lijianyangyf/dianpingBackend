@@ -6,7 +6,7 @@ secret_key = "salt256"
 algorithm = "HS256"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-IMGREPO_DIR = os.path.normpath(os.path.join(BASE_DIR, "../../imgRepo"))
+IMGREPO_DIR = os.path.normpath(os.path.join(BASE_DIR, "../../../imgRepo"))
 
 def checkToken(token):
     db=Database.Database()
@@ -29,7 +29,7 @@ def checkToken(token):
     else:
         return {"code": 997}
     
-#@28 后台菜品获取函数(老唐版)
+#@28 后台菜品获取函数(老唐版)————OK
 def getDishList(stallID,token):
     db=Database.Database()
     response={}
@@ -57,9 +57,9 @@ def getDishList(stallID,token):
                     dish = {
                         "ID": int(row.get("ID")),
                         "name": row.get("name"),
-                        "price": float(row.get("rating", 0)),
-                        "like": int(row.get("meanPrice")),
-                        "bad": int(row.get("canteen")),
+                        "price": float(row.get("price", 0)),
+                        "like": int(row.get("like", 0)),
+                        "bad": int(row.get("bad", 0)),
                         "pictureUrl": row.get("pictureUrl")
                     }
                 else:
@@ -69,7 +69,7 @@ def getDishList(stallID,token):
                         "price": float(row[2]) if len(row) > 2 and row[2] is not None else 0.0,
                         "like": int(row[3]) if len(row) > 3 and row[3] is not None else 0,
                         "bad": int(row[4]) if len(row) > 4 and row[4] is not None else 0,
-                        "pictureUrl": row[5] if len(row) > 6 else ""
+                        "pictureUrl": row[5] if len(row) > 5 else ""
                     }
                 dishList.append(dish)
         return {"code":200, "data": {"dishList":dishList}}
@@ -136,7 +136,7 @@ def editDishInfo(ID,name,price,picture,token):
     else:
         return {"code":999, "msg":"菜品修改失败"}
     
-#@31 后台删除菜品函数(老唐版)
+#@31 后台删除菜品函数(老唐版)————OK
 def deleteDish(ID,token):
     db=Database.Database()
     response={}

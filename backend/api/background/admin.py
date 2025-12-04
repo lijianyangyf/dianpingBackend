@@ -6,7 +6,7 @@ secret_key = "salt256"
 algorithm = "HS256"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-IMGREPO_DIR = os.path.normpath(os.path.join(BASE_DIR, "../../imgRepo"))
+IMGREPO_DIR = os.path.normpath(os.path.join(BASE_DIR, "../../../imgRepo"))
 
 #@16 校验管理员token函数(老唐版)————OK
 def checkToken(token):

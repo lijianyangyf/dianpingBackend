@@ -6,7 +6,7 @@ secret_key = "salt256"
 algorithm = "HS256"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-IMGREPO_DIR = os.path.normpath(os.path.join(BASE_DIR, "../../imgRepo"))
+IMGREPO_DIR = os.path.normpath(os.path.join(BASE_DIR, "../../../imgRepo"))
 
 def checkToken(token):
     db=Database.Database()
@@ -110,7 +110,7 @@ def getUserList(userName,nickName,status,numPerPage,pageIndex,token):
         return {"code":999}
     
 #@22 后台重置用户密码函数(老唐版)————OK
-def retSetPassword(userName, token):
+def resetPassword(userName, token):
     db=Database.Database()
     response={}
     newPassword = "123456"
@@ -159,3 +159,28 @@ def freezeAccount(userName, token):
         return {"code":200}
     else:
         return {"code":999, "msg":"用户账号冻结失败"}
+    
+#@24 后台解冻用户账号函数(老唐版)
+def defrostAccount(userName, token):
+    db=Database.Database()
+    response={}
+    try:
+        token_check = checkToken(token)
+        if token_check.get("code") != 200:
+            return token_check
+        db.connect()
+        response = db.execute_query("update User set state='启用' where userName=%(userName)s",{"userName":userName})
+        db.disconnect()
+        print(response)
+    except jwt.ExpiredSignatureError:
+        return {"code": 999, "msg": "Token 已过期"}
+    except jwt.InvalidTokenError as e:
+        print(f"freezeAccount: Token 无效: {e}")
+        return {"code": 999, "msg": "Token 无效"}
+    except Exception as e:
+        print(f"freezeAccount: 其他错误: {e}")
+        return {"code": 999, "msg": f"服务器错误: {str(e)}"}
+    if response is not None:
+        return {"code":200}
+    else:
+        return {"code":999, "msg":"用户账号解冻失败"}

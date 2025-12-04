@@ -194,11 +194,12 @@ def api_user_editPassword():
     token, token_error = _extract_token_from_request()
     if not token:
         return jsonify(code=998, msg=token_error), 401
+    password = data.get("password")
     newPassword = data.get("newPassword")
     if not newPassword:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
-        response_data = user.editPassword(newPassword, token)
+        response_data = user.editPassword(password, newPassword, token)
         http_status_code = 200
         if response_data.get("code") != 200:
             http_status_code = 401
@@ -358,25 +359,20 @@ def app_food_getStallCommentList():
 # === 发表档口评论 === (12)
 @app.post("/api/food/createStallComment")
 def app_food_createStallComment():
-    try:
-        data = request.get_json()
-    except Exception as e:
-        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
-    if data is None:
-        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
     token, token_error = _extract_token_from_request()
     if not token:
         return jsonify(code=998, msg=token_error), 401
-    stallID = data.get("stallID")
-    rating = data.get("rating")
-    content = data.get("content")
-    pictrue1Url = data.get("pictrue1Url")
-    picture2Url = data.get("picture2Url")
-    picture3Url = data.get("picture3Url")
-    if not stallID or not rating or not content or not pictrue1Url or not picture2Url or not picture3Url:
+    stallID = request.form.get("stallID")
+    rating = request.form.get("rating")
+    content = request.form.get("content")
+    picture1Url = request.files.get("picture1Url")
+    picture2Url = request.files.get("picture2Url")
+    picture3Url = request.files.get("picture3Url")
+    # picture1/2/3 可选；仅强制要求 stallID, rating, content
+    if not stallID or not rating or not content:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
-        response_data = food.createStallComment(stallID, rating, content, pictrue1Url, picture2Url, picture3Url, token)
+        response_data = food.createStallComment(stallID, rating, content, picture1Url, picture2Url, picture3Url, token)
         http_status_code = 200
         if response_data.get("code") != 200:
             http_status_code = 401
@@ -596,8 +592,8 @@ def api_background_user_getUserList():
         return jsonify(code=999, msg="服务器内部错误"), 500
 
 # === 后台重置用户密码 === (22)
-@app.post("/api/background/user/retSetPassword")
-def api_background_user_retSetPassword():
+@app.post("/api/background/user/resetPassword")
+def api_background_user_resetPassword():
     try:
         data = request.get_json()
     except Exception as e:
@@ -611,13 +607,13 @@ def api_background_user_retSetPassword():
     if not userName:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
-        response_data = bg_user.retSetPassword(userName,token)
+        response_data = bg_user.resetPassword(userName,token)
         http_status_code = 200
         if response_data.get("code") != 200:
             http_status_code = 401
         return jsonify(response_data), http_status_code
     except Exception as e:
-        print(f"Error calling background.user.retSetPassword: {e}")
+        print(f"Error calling background.user.resetPassword: {e}")
         return jsonify(code=999, msg="服务器内部错误"), 500
 
 # === 后台冻结用户账号 === (23)
@@ -645,7 +641,32 @@ def api_background_user_freezeAccount():
         print(f"Error calling background.user.freezeAccount: {e}")
         return jsonify(code=999, msg="服务器内部错误"), 500
     
-# === 后台获取档口列表  === (24)
+# === 后台解冻用户账号 === (24)
+@app.post("/api/background/user/defrostAccount")
+def api_background_user_defrostAccount():
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
+    if data is None:
+        return jsonify(code=999, msg="请求体为空或非JSON格式"), 400
+    token, token_error = _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+    userName = data.get("userName")
+    if not userName:
+        return jsonify(code=999, msg="参数不完整"), 400
+    try:
+        response_data = bg_user.defrostAccount(userName,token)
+        http_status_code = 200
+        if response_data.get("code") != 200:
+            http_status_code = 401
+        return jsonify(response_data), http_status_code
+    except Exception as e:
+        print(f"Error calling background.user.defrostAccount: {e}")
+        return jsonify(code=999, msg="服务器内部错误"), 500
+
+# === 后台获取档口列表  === (25)
 @app.get("/api/background/food/getStallList")
 def api_background_food_getStallList():
     token, token_error = _extract_token_from_request()
@@ -671,7 +692,7 @@ def api_background_food_getStallList():
         print(f"Error calling background.food.getStallList: {e}")
         return jsonify(code=999, msg="服务器内部错误"), 500
 
-# === 后台新增档口 === (25)
+# === 后台新增档口 === (26)
 @app.post("/api/background/food/addStall")
 def api_background_food_addStall():
     token, token_error = _extract_token_from_request()
@@ -695,7 +716,7 @@ def api_background_food_addStall():
         print(f"Error calling background.food.addStall: {e}") 
         return jsonify(code=999, msg="服务器内部错误"), 500
 
-# === 后台档口信息修改 === (26)
+# === 后台档口信息修改 === (27)
 @app.post("/api/background/food/editStallInfo")
 def api_background_food_editStallInfo():
     token, token_error = _extract_token_from_request()
@@ -719,7 +740,7 @@ def api_background_food_editStallInfo():
         print(f"Error calling background.food.editStallInfo: {e}") 
         return jsonify(code=999, msg="服务器内部错误"), 500
     
-# === 后台删除档口 === (27)
+# === 后台删除档口 === (28)
 @app.post("/api/background/food/deleteStall")
 def api_background_food_deleteStall():
     try:
@@ -744,7 +765,7 @@ def api_background_food_deleteStall():
         print(f"Error calling background.food.deleteStall: {e}")
         return jsonify(code=999, msg="服务器内部错误"), 500
     
-# === 后台获取菜品 === (28)
+# === 后台获取菜品 === (29)
 @app.get("/api/background/dish/getDishList")
 def api_background_dish_getDishList():
     token, token_error = _extract_token_from_request()
@@ -766,7 +787,7 @@ def api_background_dish_getDishList():
         print(f"Error calling background.dish.getDishList: {e}")
         return jsonify(code=999, msg="服务器内部错误"), 500
     
-# === 后台新增菜品 === (29)
+# === 后台新增菜品 === (30)
 @app.post("/api/background/dish/addDish")
 def api_background_dish_addDish():
     token, token_error = _extract_token_from_request()
@@ -788,7 +809,7 @@ def api_background_dish_addDish():
         print(f"Error calling background.dish.addDish: {e}")
         return jsonify(code=999, msg="服务器内部错误"), 500
     
-# === 后台修改菜品信息 === (30)
+# === 后台修改菜品信息 === (31)
 @app.post("/api/background/dish/editDishInfo")
 def api_background_dish_editDishInfo():
     token, token_error = _extract_token_from_request()
@@ -810,7 +831,7 @@ def api_background_dish_editDishInfo():
         print(f"Error calling background.dish.editDishInfo: {e}")
         return jsonify(code=999, msg="服务器内部错误"), 500
     
-# === 后台删除菜品 === (31)
+# === 后台删除菜品 === (32)
 @app.post("/api/background/dish/deleteDish")
 def api_background_dish_deleteDish():
     try:
@@ -835,7 +856,7 @@ def api_background_dish_deleteDish():
         print(f"Error calling background.dish.deleteDish: {e}")
         return jsonify(code=999, msg="服务器内部错误"), 500
     
-# === 后台获取管理员列表 === (32)
+# === 后台获取管理员列表 === (33)
 @app.get("/api/background/adminManage/getAdminList")
 def api_background_adminManage_getAdminList():
     token, token_error = _extract_token_from_request()
@@ -861,7 +882,7 @@ def api_background_adminManage_getAdminList():
         print(f"Error calling background.adminManage.getAdminList: {e}")
         return jsonify(code=999, msg="服务器内部错误"), 500
 
-# === 后台重置管理员密码 === (33)
+# === 后台重置管理员密码 === (34)
 @app.post("/api/background/adminManage/resetPassword")
 def api_background_adminManage_resetPassword():
     try:
@@ -886,7 +907,7 @@ def api_background_adminManage_resetPassword():
         print(f"Error calling background.adminManage.resetPassword: {e}")
         return jsonify(code=999, msg="服务器内部错误"), 500
     
-# === 后台删除管理员 === (34)
+# === 后台删除管理员 === (35)
 @app.post("/api/background/adminManage/deleteAdmin")
 def api_bakcground_adminManage_deleteAdmin():
     try:
@@ -911,7 +932,7 @@ def api_bakcground_adminManage_deleteAdmin():
         print(f"Error calling background.adminManage.deleteAdmin: {e}")
         return jsonify(code=999, msg="服务器内部错误"), 500
     
-# === 后台新增管理员 === (35)
+# === 后台新增管理员 === (36)
 @app.post("/api/background/adminManage/addAdmin")
 def api_background_adminManage_addAdmin():
     try:

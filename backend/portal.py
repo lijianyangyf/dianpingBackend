@@ -365,14 +365,14 @@ def app_food_createStallComment():
     stallID = request.form.get("stallID")
     rating = request.form.get("rating")
     content = request.form.get("content")
-    picture1Url = request.files.get("picture1Url")
-    picture2Url = request.files.get("picture2Url")
-    picture3Url = request.files.get("picture3Url")
+    picture1 = request.files.get("picture1")
+    picture2 = request.files.get("picture2")
+    picture3 = request.files.get("picture3")
     # picture1/2/3 可选；仅强制要求 stallID, rating, content
     if not stallID or not rating or not content:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
-        response_data = food.createStallComment(stallID, rating, content, picture1Url, picture2Url, picture3Url, token)
+        response_data = food.createStallComment(stallID, rating, content, picture1, picture2, picture3, token)
         http_status_code = 200
         if response_data.get("code") != 200:
             http_status_code = 401

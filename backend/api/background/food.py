@@ -47,7 +47,7 @@ def getStallList(name,type,canteen,numPerPage,pageIndex,token):
         db.connect()
         where_conditions = []
         if name and name != "":
-            where_conditions.append(f"name = '{name}'")
+            where_conditions.append(f"name like '%{name}%'")
         if type and type != "全部":
             where_conditions.append(f"type = '{type}'")
         if canteen and canteen != "全部":

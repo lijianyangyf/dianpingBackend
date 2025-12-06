@@ -47,9 +47,9 @@ def getUserList(userName,nickName,status,numPerPage,pageIndex,token):
         db.connect()
         where_conditions = []
         if userName and userName != "":
-            where_conditions.append(f"userName = '{userName}'")
+            where_conditions.append(f"userName like '%{userName}%'")
         if nickName and nickName != "":
-            where_conditions.append(f"nickName = '{nickName}'")
+            where_conditions.append(f"nickName like '%{nickName}%'")
         if state and state != "全部":
             where_conditions.append(f"state = '{state}'")
         where_clause = ""
@@ -125,10 +125,10 @@ def resetPassword(userName, token):
     except jwt.ExpiredSignatureError:
         return {"code": 999, "msg": "Token 已过期"}
     except jwt.InvalidTokenError as e:
-        print(f"retSetPassword: Token 无效: {e}")
+        print(f"resetPassword: Token 无效: {e}")
         return {"code": 999, "msg": "Token 无效"}
     except Exception as e:
-        print(f"retSetPassword: 其他错误: {e}")
+        print(f"resetPassword: 其他错误: {e}")
         return {"code": 999, "msg": f"服务器错误: {str(e)}"}
     if response is not None:
         return {"code":200, "class": {"newPassword": newPassword}}

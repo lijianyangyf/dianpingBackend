@@ -8,7 +8,7 @@ LOG_DIR = os.path.join(os.path.dirname(__file__), "logs")
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
 
-# 日志格式（JSON 格式更利于日志系统抓取）
+# 日志格式
 LOG_FORMAT = (
     '{"time": "%(asctime)s", '
     '"level": "%(levelname)s", '

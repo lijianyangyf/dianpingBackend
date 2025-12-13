@@ -365,14 +365,14 @@ def app_food_createStallComment():
     stallID = request.form.get("stallID")
     rating = request.form.get("rating")
     content = request.form.get("content")
-    picture1 = request.files.get("picture1")
-    picture2 = request.files.get("picture2")
-    picture3 = request.files.get("picture3")
+    picture1Url = request.files.get("picture1")
+    picture2Url = request.files.get("picture2")
+    picture3Url = request.files.get("picture3")
     # picture1/2/3 可选；仅强制要求 stallID, rating, content
     if not stallID or not rating or not content:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
-        response_data = food.createStallComment(stallID, rating, content, picture1, picture2, picture3, token)
+        response_data = food.createStallComment(stallID, rating, content, picture1Url, picture2Url, picture3Url, token)
         http_status_code = 200
         if response_data.get("code") != 200:
             http_status_code = 401
@@ -973,8 +973,6 @@ SPA_PATHS = [
     "/foodReview/stall",
     "/foodReview/stall/dish",
     "/foodReview/stall/comment",
-    "/background",
-    "/background/"
 ]
 
 def _serve_page_for(route_path: str):
@@ -982,8 +980,6 @@ def _serve_page_for(route_path: str):
     访问route_path(如/a/b),返回/a/b.html。
     若无该网页，则返回/home.html。
     """
-    if route_path == "/background" or route_path == "/background/":
-        route_path = "/background/index"  # 特例：后台管理入口默认指向 /background/index.html
     # 显式地将路径视为文件进行检查
     relative_path = route_path.strip("/") + ".html"
     candidate_html = os.path.join(app.static_folder, relative_path)
@@ -1000,6 +996,13 @@ for route in SPA_PATHS:
         return lambda: _serve_page_for(p)
     endpoint_name = "spa_" + (route.strip("/") or "root").replace("/", "_")
     app.add_url_rule(route, endpoint=endpoint_name, view_func=_mk_handler(), methods=["GET"])
+
+@app.get("/background")
+@app.get("/background/")
+@app.get("/background/<path:subpath>")
+def background_root():
+    return send_from_directory(app.static_folder,"background/index.html")
+
 # === 兜底静态与路由 ===
 @app.get("/<path:path>")
 def fallback(path: str):

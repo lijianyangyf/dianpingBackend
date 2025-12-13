@@ -973,6 +973,8 @@ SPA_PATHS = [
     "/foodReview/stall",
     "/foodReview/stall/dish",
     "/foodReview/stall/comment",
+    "/background",
+    "/background/"
 ]
 
 def _serve_page_for(route_path: str):
@@ -980,6 +982,8 @@ def _serve_page_for(route_path: str):
     访问route_path(如/a/b),返回/a/b.html。
     若无该网页，则返回/home.html。
     """
+    if route_path == "/background" or route_path == "/background/":
+        route_path = "/background/index"  # 特例：后台管理入口默认指向 /background/index.html
     # 显式地将路径视为文件进行检查
     relative_path = route_path.strip("/") + ".html"
     candidate_html = os.path.join(app.static_folder, relative_path)

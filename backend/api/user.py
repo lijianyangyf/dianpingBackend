@@ -69,11 +69,6 @@ def login(userName,password):
     else:
         return {"code": 999, "msg": "用户名或密码错误"}
 
-""" test:
-Invoke-RestMethod -Uri http://127.0.0.1:8000/api/user/signUp `
- -Method Post -Body '{"userName":"ljy","nickName":"New","password":"123456"}' `
- -ContentType "application/json"
-"""
 #@3 注册函数(老唐版)————测试成功
 def signUp(userName, nickName, password):
     db = Database.Database()

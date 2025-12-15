@@ -131,7 +131,7 @@ def resetPassword(userName, token):
         print(f"resetPassword: 其他错误: {e}")
         return {"code": 999, "msg": f"服务器错误: {str(e)}"}
     if response is not None:
-        return {"code":200, "class": {"newPassword": newPassword}}
+        return {"code":200, "data": {"newPassword": newPassword}}
     else:
         return {"code":999, "msg":"用户密码重置失败"}
     

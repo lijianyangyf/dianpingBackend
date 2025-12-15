@@ -88,6 +88,8 @@ def addDish(stallID,name,price,picture,token):
             saveUrl = os.path.join(IMGREPO_DIR, f"dish_{name}_picture.png")
             picture.save(saveUrl)
             pictureUrl = f"/imgRepo/dish_{name}_picture.png"
+        else:
+            pictureUrl = ""
         db.connect()
         response = db.execute_query("insert into Dish (name,price,stallID,pictureUrl) values (%(name)s,%(price)s,%(stallID)s,%(pictureUrl)s)",
             {"name":name,"price":price,"stallID":stallID,"pictureUrl":pictureUrl})
@@ -114,13 +116,16 @@ def editDishInfo(ID,name,price,picture,token):
         token_check = checkToken(token)
         if token_check.get("code") != 200:
             return token_check
+        db.connect()
         if picture:
             saveUrl = os.path.join(IMGREPO_DIR, f"dish_{name}_picture.png")
             picture.save(saveUrl)
             pictureUrl = f"/imgRepo/dish_{name}_picture.png"
-        db.connect()
-        response = db.execute_query("update Dish set name=%(name)s,price=%(price)s,pictureUrl=%(pictureUrl)s where ID=%(ID)s",
-            {"name":name,"price":price,"pictureUrl":pictureUrl,"ID":ID})
+            response = db.execute_query("update Dish set name=%(name)s,price=%(price)s,pictureUrl=%(pictureUrl)s where ID=%(ID)s",
+                {"name":name,"price":price,"pictureUrl":pictureUrl,"ID":ID})
+        else:
+            response = db.execute_query("update Dish set name=%(name)s,price=%(price)s where ID=%(ID)s",
+                {"name":name,"price":price,"ID":ID})
         db.disconnect()
         print(response)
     except jwt.ExpiredSignatureError:

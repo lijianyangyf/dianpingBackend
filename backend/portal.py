@@ -170,8 +170,10 @@ def api_user_editInfo():
         return jsonify(code=998, msg=token_error), 401
     nickName = request.form.get("nickName")
     avatar = request.files.get("avatar")
-    if not nickName or not avatar:
+    if not nickName:
         return jsonify(code=999, msg="参数不完整"), 400
+    if not avatar:
+        avatar = ""
     try:
         response_data = user.editInfo(nickName,avatar,token)
         http_status_code = 200
@@ -365,14 +367,20 @@ def app_food_createStallComment():
     stallID = request.form.get("stallID")
     rating = request.form.get("rating")
     content = request.form.get("content")
-    picture1Url = request.files.get("picture1")
-    picture2Url = request.files.get("picture2")
-    picture3Url = request.files.get("picture3")
+    picture1 = request.files.get("picture1")
+    picture2 = request.files.get("picture2")
+    picture3 = request.files.get("picture3")
     # picture1/2/3 可选；仅强制要求 stallID, rating, content
     if not stallID or not rating or not content:
         return jsonify(code=999, msg="参数不完整"), 400
+    if not picture1:
+        picture1 = None
+    if not picture2:
+        picture2 = None
+    if not picture3:
+        picture3 = None
     try:
-        response_data = food.createStallComment(stallID, rating, content, picture1Url, picture2Url, picture3Url, token)
+        response_data = food.createStallComment(stallID, rating, content, picture1, picture2, picture3, token)
         http_status_code = 200
         if response_data.get("code") != 200:
             http_status_code = 401
@@ -380,6 +388,7 @@ def app_food_createStallComment():
     except Exception as e:
         print(f"Error calling food.getStallCommentList: {e}")
         return jsonify(code=999, msg="服务器内部错误"), 500
+    
 
 # === 评价评论 === (13)
 @app.post("/api/food/evaluationComment")
@@ -703,7 +712,7 @@ def api_background_food_addStall():
     canteen = request.form.get("canteen")
     introduction = request.form.get("introduction")
     picture = request.files.get("picture")
-    if not name or not stall_type  or not canteen or not introduction or not picture:
+    if not name or not stall_type  or not canteen or not introduction:
         return jsonify(code=999, msg="参数不完整"), 400
     print(f"name: {name}, type: {type(name)}")
     try:
@@ -799,7 +808,7 @@ def api_background_dish_addDish():
     name = request.form.get("name")
     price = request.form.get("price")
     picture = request.files.get("picture")
-    if not stallID or not name or not price or not picture:
+    if not stallID or not name or not price:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
         response_data = bg_dish.addDish(stallID,name,price,picture,token)
@@ -823,8 +832,6 @@ def api_background_dish_editDishInfo():
     picture = request.files.get("picture")
     if not ID or not name or not price:
         return jsonify(code=999, msg="参数不完整"), 400
-    if not picture:
-        picture = ""
     try:
         response_data = bg_dish.editDishInfo(ID,name,price,picture,token)
         http_status_code = 200

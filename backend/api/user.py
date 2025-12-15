@@ -119,15 +119,20 @@ def editInfo(nickName, avatar, token):
         payload = jwt.decode(token, secret_key, algorithms=[algorithm])
         userName = payload.get("userName")
         password = payload.get("password")
+        db.connect()
         if avatar:
             saveUrl = os.path.join(IMGREPO_DIR, f"{userName}_avatar.png")
             avatar.save(saveUrl)
             avatarUrl = f"/imgRepo/{userName}_avatar.png"
-        db.connect()
-        response = db.execute_query(
-            "update User set nickName = %(nickName)s, avatarUrl = %(avatarUrl)s where userName = %(userName)s",
-            {"nickName": nickName, "avatarUrl": avatarUrl, "userName": userName}
-        )
+            response = db.execute_query(
+                "update User set nickName = %(nickName)s, avatarUrl = %(avatarUrl)s where userName = %(userName)s",
+                {"nickName": nickName, "avatarUrl": avatarUrl, "userName": userName}
+            )
+        else:
+            response = db.execute_query(
+                "update User set nickName = %(nickName)s where userName = %(userName)s",
+                {"nickName": nickName, "userName": userName}
+            )
         db.disconnect()
     #若token出现问题
     except jwt.ExpiredSignatureError:
@@ -314,7 +319,7 @@ def getCommentList(numPerPage, pageIndex, token):
                         "stallName": row.get("stall_name"),
                         "canteen": row.get("canteen"),
                         "dateTime": row.get("dateTime"),
-                        "rating": float(row.get("rating", 0)),
+                        "rating": int(row.get("rating", 0)),
                         "like": row.get("recommendCount", 0),
                         "content": row.get("content", ""),
                         "picture1Url": row.get("picture1Url"),
@@ -328,7 +333,7 @@ def getCommentList(numPerPage, pageIndex, token):
                         "stallName": row[1] if len(row) > 1 else "",
                         "canteen": row[2] if len(row) > 2 else "",
                         "dateTime": row[3] if len(row) > 3 else None,
-                        "rating": float(row[4]) if len(row) > 4 else 0.0,
+                        "rating": int(row[4]) if len(row) > 4 else 0,
                         "like": row[5] if len(row) > 5 else 0,
                         "content": row[6] if len(row) > 6 else "",
                         "picture1Url": row[7] if len(row) > 7 else None,

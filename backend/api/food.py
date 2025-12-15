@@ -1,9 +1,11 @@
 import Database
 import jwt
 import time
+import os
 secret_key = "salt256"
 algorithm = "HS256"
-
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+IMGREPO_DIR = os.path.normpath(os.path.join(BASE_DIR, "../../imgRepo"))
 def checkToken(token):
     db=Database.Database()
     response={}
@@ -151,8 +153,8 @@ def getStallList(type_str,canteen,orderBy,collation,numPerPage,pageIndex,token):
                     stall = {
                         "ID": row.get("ID"),
                         "name": row.get("name"),
-                        "rating": float(row.get("rating", 0)),
-                        "meanPrice": float(row.get("meanPrice", 0)),
+                        "rating": round(float(row.get("rating", 0)), 1),
+                        "meanPrice": round(float(row.get("meanPrice", 0)), 1),
                         "type": row.get("type"),
                         "canteen": row.get("canteen"),
                         "signatureDish": row.get("signatureDish"),
@@ -163,8 +165,8 @@ def getStallList(type_str,canteen,orderBy,collation,numPerPage,pageIndex,token):
                     stall = {
                         "ID": row[0] if len(row) > 0 else None,
                         "name": row[1] if len(row) > 1 else "",
-                        "rating": float(row[2]) if len(row) > 2 and row[2] is not None else 0.0,
-                        "meanPrice": float(row[3]) if len(row) > 3 and row[3] is not None else 0.0,
+                        "rating": round(float(row[2]) if len(row) > 2 and row[2] is not None else 0.0, 1),
+                        "meanPrice": round(float(row[3]) if len(row) > 3 and row[3] is not None else 0.0, 1),
                         "type": row[4] if len(row) > 4 else "",
                         "canteen": row[5] if len(row) > 5 else "",
                         "signatureDish": row[6] if len(row) > 6 else "",
@@ -215,8 +217,8 @@ def getStallInfo(stallID, token):
             stall_info = {
                 "ID": stall_row.get("ID"),
                 "name": stall_row.get("name"),
-                "rating": float(stall_row.get("rating", 0)),
-                "meanPrice": float(stall_row.get("meanPrice", 0)),
+                "rating": round(float(stall_row.get("rating", 0)), 1),
+                "meanPrice": round(float(stall_row.get("meanPrice", 0)), 1),
                 "introduction": stall_row.get("introduction", ""),
                 "canteen": stall_row.get("canteen", ""),
                 "signatureDish": stall_row.get("signatureDish", ""),
@@ -227,8 +229,8 @@ def getStallInfo(stallID, token):
             stall_info = {
                 "ID": stall_row[0] if len(stall_row) > 0 else None,
                 "name": stall_row[1] if len(stall_row) > 1 else "",
-                "rating": float(stall_row[2]) if len(stall_row) > 2 and stall_row[2] is not None else 0.0,
-                "meanPrice": float(stall_row[3]) if len(stall_row) > 3 and stall_row[3] is not None else 0.0,
+                "rating": round(float(stall_row[2]) if len(stall_row) > 2 and stall_row[2] is not None else 0.0, 1),
+                "meanPrice": round(float(stall_row[3]) if len(stall_row) > 3 and stall_row[3] is not None else 0.0, 1),
                 "introduction": stall_row[4] if len(stall_row) > 4 else "",
                 "canteen": stall_row[5] if len(stall_row) > 5 else "",
                 "signatureDish": stall_row[6] if len(stall_row) > 6 else "",
@@ -248,8 +250,8 @@ def getStallInfo(stallID, token):
                     dish = {
                         "ID": dish_row.get("ID"),
                         "name": dish_row.get("name"),
-                        "price": float(dish_row.get("price", 0)),
-                        "rating": float(dish_row.get("rating", 0)),
+                        "price": round(float(dish_row.get("price", 0)), 1),
+                        "rating": round(float(dish_row.get("rating", 0)), 1),
                         "pictureUrl": dish_row.get("pictureUrl", "")
                     }
                 else:
@@ -257,8 +259,8 @@ def getStallInfo(stallID, token):
                     dish = {
                         "ID": dish_row[0] if len(dish_row) > 0 else None,
                         "name": dish_row[1] if len(dish_row) > 1 else "",
-                        "price": float(dish_row[2]) if len(dish_row) > 2 and dish_row[2] is not None else 0.0,
-                        "rating": float(dish_row[3]) if len(dish_row) > 3 and dish_row[3] is not None else 0.0,
+                        "price": round(float(dish_row[2]) if len(dish_row) > 2 and dish_row[2] is not None else 0.0, 1),
+                        "rating": round(float(dish_row[3]) if len(dish_row) > 3 and dish_row[3] is not None else 0.0, 1),
                         "pictureUrl": dish_row[4] if len(dish_row) > 4 else ""
                     }
                 dish_list.append(dish)
@@ -279,7 +281,7 @@ def getStallInfo(stallID, token):
                         "reviewerName": comment_row.get("reviewerName"),
                         "avatarUrl": comment_row.get("avatarUrl"),
                         "dateTime": comment_row.get("dateTime").isoformat() if comment_row.get("dateTime") else None,
-                        "rating": float(comment_row.get("rating", 0)),
+                        "rating": int(comment_row.get("rating", 0)),
                         "like": comment_row.get("like", 0),
                         "content": comment_row.get("content", ""),
                         "picture1Url": comment_row.get("picture1Url"),
@@ -294,7 +296,7 @@ def getStallInfo(stallID, token):
                         "reviewerName": comment_row[1] if len(comment_row) > 1 else "",
                         "avatarUrl": comment_row[2] if len(comment_row) > 2 else "",
                         "dateTime": comment_row[3].isoformat() if len(comment_row) > 3 and comment_row[3] else None,
-                        "rating": float(comment_row[4]) if len(comment_row) > 4 and comment_row[4] is not None else 0.0,
+                        "rating": int(comment_row[4]) if len(comment_row) > 4 and comment_row[4] is not None else 0,
                         "like": comment_row[5] if len(comment_row) > 5 else 0,
                         "content": comment_row[6] if len(comment_row) > 6 else "",
                         "picture1Url": comment_row[7] if len(comment_row) > 7 else None,
@@ -409,7 +411,7 @@ def getStallCommentList(stallID, numPerPage, pageIndex, token):
                             "reviewerName": row.get("reviewerName"),
                             "avatarUrl": row.get("avatarUrl"),
                             "dateTime": row.get("dateTime").isoformat() if row.get("dateTime") else None,
-                            "rating": float(row.get("rating", 0)),
+                            "rating": int(row.get("rating", 0)),
                             "like": row.get("like", 0),
                             "content": row.get("content", ""),
                             "picture1Url": row.get("picture1Url"),
@@ -424,7 +426,7 @@ def getStallCommentList(stallID, numPerPage, pageIndex, token):
                             "reviewerName": row[1] if len(row) > 1 else "",
                             "avatarUrl": row[2] if len(row) > 2 else "",
                             "dateTime": row[3].isoformat() if len(row) > 3 and row[3] else None,
-                            "rating": float(row[4]) if len(row) > 4 and row[4] is not None else 0.0,
+                            "rating": int(row[4]) if len(row) > 4 and row[4] is not None else 0,
                             "like": row[5] if len(row) > 5 else 0,
                             "content": row[6] if len(row) > 6 else "",
                             "picture1Url": row[7] if len(row) > 7 else None,
@@ -460,7 +462,7 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/food/createStallComment" -Meth
 """
 
 #@12 发表评论函数(老唐版)————测试成功
-def createStallComment(stallID, rating, content, picture1Url, picture2Url, picture3Url, token):
+def createStallComment(stallID, rating, content, picture1, picture2, picture3, token):
     db = Database.Database()
     response={}
     userName=""
@@ -473,6 +475,24 @@ def createStallComment(stallID, rating, content, picture1Url, picture2Url, pictu
         payload = jwt.decode(token, secret_key, algorithms=[algorithm])
         userName = payload.get("userName")
         password = payload.get("password")
+        if picture1:
+            saveUrl = os.path.join(IMGREPO_DIR, f"{userName}_picture1.png")
+            picture1.save(saveUrl)
+            picture1Url = f"/imgRepo/{userName}_picture1.png"
+        else:
+            picture1Url = ""
+        if picture2:
+            saveUrl = os.path.join(IMGREPO_DIR, f"{userName}_picture2.png")
+            picture2.save(saveUrl)
+            picture2Url = f"/imgRepo/{userName}_picture2.png"
+        else:
+            picture2Url = ""
+        if picture3:
+            saveUrl = os.path.join(IMGREPO_DIR, f"{userName}_picture3.png")
+            picture3.save(saveUrl)
+            picture3Url = f"/imgRepo/{userName}_picture3.png"
+        else:
+            picture3Url = ""
         db.connect()
         #使用数据库进行查询
         response = db.execute_query("""insert into StallComment (userName, stallID, content, 
@@ -644,7 +664,7 @@ def getStallDishList(stallID, token):
                     dish = {
                         "ID": row.get("ID"),
                         "name": row.get("name"),
-                        "price": float(row.get("price", 0)),
+                        "price": round(float(row.get("price", 0)), 1),
                         "like": row.get("like", 0),
                         "bad": row.get("bad", 0),
                         "pictureUrl": row.get("pictureUrl"),
@@ -656,7 +676,7 @@ def getStallDishList(stallID, token):
                     dish = {
                         "ID": row[0] if len(row) > 0 else None,
                         "name": row[1] if len(row) > 1 else "",
-                        "price": float(row[2]) if len(row) > 2 else 0.0,
+                        "price": round(float(row[2]) if len(row) > 2 else 0.0, 1),
                         "like": row[3] if len(row) > 3 else 0,
                         "bad": row[4] if len(row) > 4 else 0,
                         "pictureUrl": row[5] if len(row) > 5 else None,

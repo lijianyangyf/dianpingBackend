@@ -728,10 +728,8 @@ def api_background_food_editStallInfo():
     canteen = request.form.get("canteen")
     introduction = request.form.get("introduction")
     picture = request.files.get("picture")
-    if not name or not type or not canteen or not introduction:
+    if not name or not type or not canteen or not introduction or not picture:
         return jsonify(code=999, msg="参数不完整"), 400
-    if not picture:
-        picture = ""
     try:
         response_data = bg_food.editStallInfo(ID, name, type, canteen, introduction, picture, token)
         http_status_code = 200 
@@ -821,10 +819,8 @@ def api_background_dish_editDishInfo():
     name = request.form.get("name")
     price = request.form.get("price")
     picture = request.files.get("picture")
-    if not ID or not name or not price:
+    if not ID or not name or not price or not picture:
         return jsonify(code=999, msg="参数不完整"), 400
-    if not picture:
-        picture = ""
     try:
         response_data = bg_dish.editDishInfo(ID,name,price,picture,token)
         http_status_code = 200

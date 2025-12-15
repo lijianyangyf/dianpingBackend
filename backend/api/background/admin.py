@@ -51,7 +51,7 @@ def login(ID,password):
         secret_key,
         algorithm=algorithm
     )
-    if response is not None:
+    if response is not None and len(response) > 0:
         return {"code": 200, "data": {"token": token}}
     else:
         return {"code": 999, "msg": "用户不存在|密码错误"}

@@ -35,7 +35,7 @@ def getAdminList(adminID,name,permission,numPerPage,pageIndex,token):
     response={}
     adminID = str(adminID) if adminID is not None else ""
     name = str(name) if name is not None else ""
-    permission = str(permission) if permission is not None else ""
+    permission = str(permission) if permission is not None else "全部"
     numPerPage_int = int(numPerPage)
     pageIndex_int = int(pageIndex)
     numPerPage = str(numPerPage) if numPerPage else "10"
@@ -49,8 +49,8 @@ def getAdminList(adminID,name,permission,numPerPage,pageIndex,token):
         if adminID and adminID != "":
             where_conditions.append(f"ID = '{adminID}'")
         if name and name != "":
-            where_conditions.append(f"name = '{name}'")
-        if permission and permission != "":
+            where_conditions.append(f"name like '%{name}%'")
+        if permission and permission != "全部":
             where_conditions.append(f"authority = '{permission}'")
         where_clause = ""
         if where_conditions:
@@ -118,7 +118,19 @@ def resetPassword(ID,token):
         token_check = checkToken(token)
         if token_check.get("code") != 200:
             return token_check
+        payload = jwt.decode(token, secret_key, algorithms=[algorithm])
+        adminID = payload.get("ID")
         db.connect()
+        response_authority = db.execute_query("select authority from Admin where ID=%(adminID)s",{"adminID":adminID})
+        if response_authority is not None:
+            authority = ""
+            if isinstance(response_authority[0], dict):
+                authority = response_authority[0].get("authority", "")
+            else:
+                authority = response_authority[0][0] if len(response_authority) > 0 else ""
+            if authority != "超级管理员":
+                db.disconnect()
+                return {"code":999, "msg":"只有超级管理员才能重置其他管理员密码"}
         response = db.execute_query("update Admin set password=%(newPassword)s where ID=%(ID)s",{"newPassword":newPassword, "ID":ID})
         db.disconnect()
         print(response)
@@ -143,7 +155,19 @@ def deleteAdmin(ID,token):
         token_check = checkToken(token)
         if token_check.get("code") != 200:
             return token_check
+        payload = jwt.decode(token, secret_key, algorithms=[algorithm])
+        adminID = payload.get("ID")
         db.connect()
+        response_authority = db.execute_query("select authority from Admin where ID=%(adminID)s",{"adminID":adminID})
+        if response_authority is not None:
+            authority = ""
+            if isinstance(response_authority[0], dict):
+                authority = response_authority[0].get("authority", "")
+            else:
+                authority = response_authority[0][0] if len(response_authority) > 0 else ""
+            if authority != "超级管理员":
+                db.disconnect()
+                return {"code":999, "msg":"只有超级管理员才能删除管理员"}
         response = db.execute_query("delete from Admin where ID=%(ID)s",{"ID":ID})
         db.disconnect()
         print(response)
@@ -169,7 +193,19 @@ def addAdmin(name,token):
         token_check = checkToken(token)
         if token_check.get("code") != 200:
             return token_check
+        payload = jwt.decode(token, secret_key, algorithms=[algorithm])
+        ID = payload.get("ID")
         db.connect()
+        response_authority = db.execute_query("select authority from Admin where ID=%(ID)s",{"ID":ID})
+        if response_authority is not None:
+            authority = ""
+            if isinstance(response_authority[0], dict):
+                authority = response_authority[0].get("authority", "")
+            else:
+                authority = response_authority[0][0] if len(response_authority) > 0 else ""
+            if authority != "超级管理员":
+                db.disconnect()
+                return {"code":999, "msg":"只有超级管理员才能新增管理员"}
         response = db.execute_query("insert into Admin (password,name,authority) values (%(password)s,%(name)s,'普通管理员')",{"password":password,"name":name})
         response_id = db.execute_query("select ID from Admin where name=%(name)s and password=%(password)s",{"name":name,"password":password})
         db.disconnect()

@@ -874,14 +874,14 @@ def api_background_adminManage_getAdminList():
     if not token:
         return jsonify(code=997, msg=token_error), 401
     try:
-        adminID = request.args.get("adminID")
+        adminID = request.args.get("ID")
         name = request.args.get("name")
         permission = request.args.get("permission")
         numPerPage = request.args.get("numPerPage")
         pageIndex = request.args.get("pageIndex")
     except Exception as e:
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
-    if adminID is None or name is None or permission is None or not numPerPage or not pageIndex:
+    if not numPerPage or not pageIndex:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
         response_data = bg_adm.getAdminList(adminID, name, permission, numPerPage, pageIndex, token)

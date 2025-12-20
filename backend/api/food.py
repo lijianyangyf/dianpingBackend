@@ -719,7 +719,37 @@ def evaluateDish(dishID, newEvaluation, token):
         else:
             newEvaluation="无"
         #使用数据库进行更新
-        response = db.execute_query("update DishEvaluation set evaluation=%(newEvaluation)s where dishID=%(dishID)s and userName=%(userName)s", {"newEvaluation":newEvaluation, "dishID":dishID, "userName":userName})
+        response_search = db.execute_query("select * from DishEvaluation where userName=%(userName)s and dishID=%(dishID)s",{"userName":userName,"dishID":dishID})
+        old_evaluation = response_search[0][2] if response_search and len(response_search) > 0 else None
+        
+        # 更新Dish表的计数
+        if old_evaluation != newEvaluation:
+            recommend_change = 0
+            dislike_change = 0
+            if old_evaluation == "赞":
+                recommend_change -= 1
+            elif old_evaluation == "踩":
+                dislike_change -= 1
+            if newEvaluation == "赞":
+                recommend_change += 1
+            elif newEvaluation == "踩":
+                dislike_change += 1
+            if recommend_change != 0 or dislike_change != 0:
+                db.execute_query(
+                    "UPDATE Dish SET recommendCount = recommendCount + %(rec)s, dislikeCount = dislikeCount + %(dis)s WHERE ID = %(dishID)s",
+                    {"rec": recommend_change, "dis": dislike_change, "dishID": dishID}
+                )
+        
+        if not response_search or len(response_search) == 0:
+            response = db.execute_query(
+                "insert into DishEvaluation (userName, dishID, evaluation) values (%(userName)s, %(dishID)s, %(evaluation)s)",
+                {"userName": userName, "dishID": dishID, "evaluation": newEvaluation}
+            )
+        else:
+            response = db.execute_query(
+                "update DishEvaluation set evaluation=%(evaluation)s where userName=%(userName)s and dishID=%(dishID)s",
+                {"evaluation": newEvaluation, "userName": userName, "dishID": dishID}
+            )
         db.disconnect()
         print(response)
     except jwt.ExpiredSignatureError:

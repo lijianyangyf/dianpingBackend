@@ -10,6 +10,7 @@
 import os
 import inspect
 from flask import Flask, send_from_directory, jsonify,request
+from dotenv import load_dotenv
 from api import user
 from api import food
 from api.background import admin
@@ -17,6 +18,10 @@ from api.background import user as bg_user
 from api.background import food as bg_food
 from api.background import dish as bg_dish
 from api.background import adminManage as bg_adm
+
+# 加载 .env
+load_dotenv()
+
 # === 路径设置（相对 backend/ 目录） ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DIST_DIR = os.path.normpath(os.path.join(BASE_DIR, "../frontend/dist"))
@@ -25,6 +30,8 @@ IMGREPO_DIR = os.path.normpath(os.path.join(BASE_DIR, "../imgRepo"))
 # 创建 Flask 应用；static_url_path 设为空字符串，允许直接以 /assets/... 等路径访问静态文件
 app = Flask(__name__, static_folder=DIST_DIR, static_url_path="")
 app.config['JSON_AS_ASCII'] = False
+# 设置 Secret Key
+app.secret_key = os.getenv("SECRET_KEY", "dev-default-secret-key")
 
 # 前端 SPA 的入口文件
 INDEX_FILE = "home.html"  # frontend/dist/home.html

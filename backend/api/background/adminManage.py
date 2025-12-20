@@ -223,7 +223,7 @@ def addAdmin(name,token):
         if isinstance(response_id, dict):
             ID = str(response_id.get("ID"))
         else:
-            ID = str(response_id[0]) if len(response_id) > 0 else ""
+            ID = str(response_id[0][0]) if len(response_id) > 0 else ""
         return {"code":200, "data": {"ID":ID, "password":password}}
     else:
         return {"code":999, "msg":"管理员新增失败"}

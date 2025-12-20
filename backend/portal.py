@@ -18,6 +18,7 @@ from api.background import user as bg_user
 from api.background import food as bg_food
 from api.background import dish as bg_dish
 from api.background import adminManage as bg_adm
+import scheduler
 
 # 加载 .env
 load_dotenv()
@@ -974,6 +975,31 @@ def api_background_adminManage_addAdmin():
     except Exception as e:
         print(f"Error calling background.adminManage.addAdmin: {e}")
         return jsonify(code=999, msg="服务器内部错误"), 500
+    
+# === 手动触发评分更新（管理员接口） ===
+@app.get("/api/background/triggerRatingUpdate")
+def api_trigger_rating_update():
+    """
+    手动触发评分更新任务（仅限超级管理员）
+    用于测试或紧急情况下手动更新所有店铺评分
+    """
+    token, token_error = _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+
+    # 验证管理员权限
+    try:
+        token_check = admin.checkToken(token)
+        if token_check.get("code") != 200:
+            return jsonify(code=997, msg="Token无效"), 401
+    except Exception:
+        return jsonify(code=997, msg="Token验证失败"), 401
+
+    # 触发更新任务
+    if scheduler.trigger_update():
+        return jsonify(code=200, msg="更新任务已触发，请查看服务器日志"), 200
+    else:
+        return jsonify(code=999, msg="调度器未运行"), 500
 
 @app.route("/imgRepo/<path:filename>")
 def get_avatar(filename):
@@ -1043,8 +1069,15 @@ def fallback(path: str):
     base_route = "/" + path  # query 已被 Flask 剥离，无需额外处理
     return _serve_page_for(base_route)
 
+# 避免 reloader 重复启动调度器
+if os.environ.get("WERKZEUG_RUN_MAIN") != "false":
+    # 首次加载或 reloader 子进程都会执行
+    if not hasattr(scheduler.scheduler, '_started_flag'):
+        scheduler.init_scheduler()
+        scheduler.scheduler._started_flag = True
+
 # === 启动服务 ===
 # python -m flask --app portal run --port 8000
 if __name__ == "__main__":
-    # 监听 0.0.0.0:8000，以满足“域名：localhost:8000”的本地开发访问需求
+    # 监听 0.0.0.0:8000，以满足"域名：localhost:8000"的本地开发访问需求
     app.run(host="0.0.0.0", port=8000, debug=True)

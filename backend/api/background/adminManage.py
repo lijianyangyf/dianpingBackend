@@ -95,14 +95,14 @@ def getAdminList(adminID,name,permission,numPerPage,pageIndex,token):
                         "ID": row.get("ID"),
                         "name": row.get("name"),
                         "permission": row.get("permission"),
-                        "pictureUrl": row.get("pictureUrl")
+                        "avatarUrl": row.get("pictureUrl")
                     }
                 else:
                     admin = {
                         "ID": row[0] if len(row) > 0 else "",
                         "name": row[1] if len(row) > 1 else "",
                         "permission": row[2] if len(row) > 2 else "",
-                        "pictureUrl": row[3] if len(row) > 3 else ""
+                        "avatarUrl": row[3] if len(row) > 3 else ""
                     }
                 adminList.append(admin)
         return {"code":200, "data": {"adminList":adminList, "totalPageNum":int(totalPageNum), "pageIndex":int(pageIndex)}}

@@ -218,7 +218,6 @@ def api_user_editPassword():
             new_token = response_data.get("data").get("token")
         if new_token:
             resp = jsonify(response_data)
-            resp.set_cookie("token", new_token)
             return resp, http_status_code
         return jsonify(response_data), http_status_code
     except Exception as e:
@@ -559,7 +558,6 @@ def api_admin_editPassword():
             new_token = response_data.get("data").get("token")
         if new_token:
             resp = jsonify(response_data)
-            resp.set_cookie("token", new_token)
             return resp, http_status_code
         return jsonify(response_data), http_status_code
     except Exception as e:

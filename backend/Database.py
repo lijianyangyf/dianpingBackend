@@ -3,6 +3,12 @@ from mysql.connector import errorcode,pooling
 import redis
 import time
 import uuid
+import os
+from dotenv import load_dotenv
+
+# 加载 .env 文件
+load_dotenv()
+
 class Redislock:
     _UNLOCK_SCRIPT = """
         if redis.call("get", KEYS[1]) == ARGV[1] then
@@ -91,15 +97,20 @@ with Redislock(rcli,lock_name,ttl_ms):
     db.execute_query(query,params,commit)
 """
 db_pool = pooling.MySQLConnectionPool(
-    pool_name="mypool",
-    pool_size=10,
+    pool_name=os.getenv("DB_POOL_NAME", "mypool"),
+    pool_size=int(os.getenv("DB_POOL_SIZE", 10)),
     pool_reset_session=True,
-    host="localhost",
-    user="ljy", #自行修改为自己的用户名
-    password="123456", #自行修改为自己的密码
-    database="test"
+    host=os.getenv("DB_HOST", "localhost"),
+    user=os.getenv("DB_USER", "root"),
+    password=os.getenv("DB_PASSWORD", ""),
+    database=os.getenv("DB_NAME", "test")
 )
-rcli = redis.Redis(host="127.0.0.1", port=6379, db=0, decode_responses=True)
+rcli = redis.Redis(
+    host=os.getenv("REDIS_HOST", "127.0.0.1"), 
+    port=int(os.getenv("REDIS_PORT", 6379)), 
+    db=int(os.getenv("REDIS_DB", 0)), 
+    decode_responses=True
+)
 def unitTest():
     db=Database()
     userId="user:test"

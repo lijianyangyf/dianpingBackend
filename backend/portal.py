@@ -10,6 +10,7 @@
 import os
 import inspect
 from flask import Flask, send_from_directory, jsonify,request
+from dotenv import load_dotenv
 from api import user
 from api import food
 from api.background import admin
@@ -17,6 +18,11 @@ from api.background import user as bg_user
 from api.background import food as bg_food
 from api.background import dish as bg_dish
 from api.background import adminManage as bg_adm
+import scheduler
+
+# 加载 .env
+load_dotenv()
+
 # === 路径设置（相对 backend/ 目录） ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DIST_DIR = os.path.normpath(os.path.join(BASE_DIR, "../frontend/dist"))
@@ -25,6 +31,8 @@ IMGREPO_DIR = os.path.normpath(os.path.join(BASE_DIR, "../imgRepo"))
 # 创建 Flask 应用；static_url_path 设为空字符串，允许直接以 /assets/... 等路径访问静态文件
 app = Flask(__name__, static_folder=DIST_DIR, static_url_path="")
 app.config['JSON_AS_ASCII'] = False
+# 设置 Secret Key
+app.secret_key = os.getenv("SECRET_KEY", "dev-default-secret-key")
 
 # 前端 SPA 的入口文件
 INDEX_FILE = "home.html"  # frontend/dist/home.html
@@ -170,8 +178,10 @@ def api_user_editInfo():
         return jsonify(code=998, msg=token_error), 401
     nickName = request.form.get("nickName")
     avatar = request.files.get("avatar")
-    if not nickName or not avatar:
+    if not nickName:
         return jsonify(code=999, msg="参数不完整"), 400
+    if not avatar:
+        avatar = ""
     try:
         response_data = user.editInfo(nickName,avatar,token)
         http_status_code = 200
@@ -208,7 +218,6 @@ def api_user_editPassword():
             new_token = response_data.get("data").get("token")
         if new_token:
             resp = jsonify(response_data)
-            resp.set_cookie("token", new_token)
             return resp, http_status_code
         return jsonify(response_data), http_status_code
     except Exception as e:
@@ -365,14 +374,20 @@ def app_food_createStallComment():
     stallID = request.form.get("stallID")
     rating = request.form.get("rating")
     content = request.form.get("content")
-    picture1Url = request.files.get("picture1Url")
-    picture2Url = request.files.get("picture2Url")
-    picture3Url = request.files.get("picture3Url")
+    picture1 = request.files.get("picture1")
+    picture2 = request.files.get("picture2")
+    picture3 = request.files.get("picture3")
     # picture1/2/3 可选；仅强制要求 stallID, rating, content
     if not stallID or not rating or not content:
         return jsonify(code=999, msg="参数不完整"), 400
+    if not picture1:
+        picture1 = None
+    if not picture2:
+        picture2 = None
+    if not picture3:
+        picture3 = None
     try:
-        response_data = food.createStallComment(stallID, rating, content, picture1Url, picture2Url, picture3Url, token)
+        response_data = food.createStallComment(stallID, rating, content, picture1, picture2, picture3, token)
         http_status_code = 200
         if response_data.get("code") != 200:
             http_status_code = 401
@@ -380,6 +395,7 @@ def app_food_createStallComment():
     except Exception as e:
         print(f"Error calling food.getStallCommentList: {e}")
         return jsonify(code=999, msg="服务器内部错误"), 500
+    
 
 # === 评价评论 === (13)
 @app.post("/api/food/evaluationComment")
@@ -542,7 +558,6 @@ def api_admin_editPassword():
             new_token = response_data.get("data").get("token")
         if new_token:
             resp = jsonify(response_data)
-            resp.set_cookie("token", new_token)
             return resp, http_status_code
         return jsonify(response_data), http_status_code
     except Exception as e:
@@ -703,7 +718,7 @@ def api_background_food_addStall():
     canteen = request.form.get("canteen")
     introduction = request.form.get("introduction")
     picture = request.files.get("picture")
-    if not name or not stall_type  or not canteen or not introduction or not picture:
+    if not name or not stall_type  or not canteen or not introduction:
         return jsonify(code=999, msg="参数不完整"), 400
     print(f"name: {name}, type: {type(name)}")
     try:
@@ -728,8 +743,10 @@ def api_background_food_editStallInfo():
     canteen = request.form.get("canteen")
     introduction = request.form.get("introduction")
     picture = request.files.get("picture")
-    if not name or not type or not canteen or not introduction or not picture:
+    if not name or not type or not canteen or not introduction:
         return jsonify(code=999, msg="参数不完整"), 400
+    if not picture:
+        picture = ""
     try:
         response_data = bg_food.editStallInfo(ID, name, type, canteen, introduction, picture, token)
         http_status_code = 200 
@@ -797,7 +814,7 @@ def api_background_dish_addDish():
     name = request.form.get("name")
     price = request.form.get("price")
     picture = request.files.get("picture")
-    if not stallID or not name or not price or not picture:
+    if not stallID or not name or not price:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
         response_data = bg_dish.addDish(stallID,name,price,picture,token)
@@ -819,7 +836,7 @@ def api_background_dish_editDishInfo():
     name = request.form.get("name")
     price = request.form.get("price")
     picture = request.files.get("picture")
-    if not ID or not name or not price or not picture:
+    if not ID or not name or not price:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
         response_data = bg_dish.editDishInfo(ID,name,price,picture,token)
@@ -863,14 +880,14 @@ def api_background_adminManage_getAdminList():
     if not token:
         return jsonify(code=997, msg=token_error), 401
     try:
-        adminID = request.args.get("adminID")
+        adminID = request.args.get("ID")
         name = request.args.get("name")
         permission = request.args.get("permission")
         numPerPage = request.args.get("numPerPage")
         pageIndex = request.args.get("pageIndex")
     except Exception as e:
         return jsonify(code=999, msg=f"JSON解析失败: {str(e)}"), 400
-    if adminID is None or name is None or permission is None or not numPerPage or not pageIndex:
+    if not numPerPage or not pageIndex:
         return jsonify(code=999, msg="参数不完整"), 400
     try:
         response_data = bg_adm.getAdminList(adminID, name, permission, numPerPage, pageIndex, token)
@@ -956,6 +973,31 @@ def api_background_adminManage_addAdmin():
     except Exception as e:
         print(f"Error calling background.adminManage.addAdmin: {e}")
         return jsonify(code=999, msg="服务器内部错误"), 500
+    
+# === 手动触发评分更新（管理员接口） ===
+@app.get("/api/background/triggerRatingUpdate")
+def api_trigger_rating_update():
+    """
+    手动触发评分更新任务（仅限超级管理员）
+    用于测试或紧急情况下手动更新所有店铺评分
+    """
+    token, token_error = _extract_token_from_request()
+    if not token:
+        return jsonify(code=997, msg=token_error), 401
+
+    # 验证管理员权限
+    try:
+        token_check = admin.checkToken(token)
+        if token_check.get("code") != 200:
+            return jsonify(code=997, msg="Token无效"), 401
+    except Exception:
+        return jsonify(code=997, msg="Token验证失败"), 401
+
+    # 触发更新任务
+    if scheduler.trigger_update():
+        return jsonify(code=200, msg="更新任务已触发，请查看服务器日志"), 200
+    else:
+        return jsonify(code=999, msg="调度器未运行"), 500
 
 @app.route("/imgRepo/<path:filename>")
 def get_avatar(filename):
@@ -996,6 +1038,13 @@ for route in SPA_PATHS:
         return lambda: _serve_page_for(p)
     endpoint_name = "spa_" + (route.strip("/") or "root").replace("/", "_")
     app.add_url_rule(route, endpoint=endpoint_name, view_func=_mk_handler(), methods=["GET"])
+
+@app.get("/background")
+@app.get("/background/")
+@app.get("/background/<path:subpath>")
+def background_root():
+    return send_from_directory(app.static_folder,"background/index.html")
+
 # === 兜底静态与路由 ===
 @app.get("/<path:path>")
 def fallback(path: str):
@@ -1018,8 +1067,15 @@ def fallback(path: str):
     base_route = "/" + path  # query 已被 Flask 剥离，无需额外处理
     return _serve_page_for(base_route)
 
+# 避免 reloader 重复启动调度器
+if os.environ.get("WERKZEUG_RUN_MAIN") != "false":
+    # 首次加载或 reloader 子进程都会执行
+    if not hasattr(scheduler.scheduler, '_started_flag'):
+        scheduler.init_scheduler()
+        scheduler.scheduler._started_flag = True
+
 # === 启动服务 ===
 # python -m flask --app portal run --port 8000
 if __name__ == "__main__":
-    # 监听 0.0.0.0:8000，以满足“域名：localhost:8000”的本地开发访问需求
+    # 监听 0.0.0.0:8000，以满足"域名：localhost:8000"的本地开发访问需求
     app.run(host="0.0.0.0", port=8000, debug=True)

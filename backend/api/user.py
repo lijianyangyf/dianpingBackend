@@ -52,6 +52,12 @@ def login(userName,password):
     db=Database.Database()
     db.connect()
     response=db.execute_query("select * from User where userName=%(userName)s AND password=%(password)s",{"userName":userName,"password":password})
+    #增加用户冻结判断以待后续使用
+    #response_state=db.execute_query("select state from User where userName=%(userName)s and password=%(password)s",{"userName":userName,"password":password})
+    #if response_state and len(response_state)>0:
+    #    if response_state[0].get("state")=="冻结" or response_state[0][0]=="冻结":
+    #        db.disconnect()
+    #        return {"code":999, "msg":"用户已被冻结"}
     db.disconnect()
     print(response)
     payload ={
@@ -64,7 +70,7 @@ def login(userName,password):
         secret_key,
         algorithm=algorithm
     )
-    if response is not None:
+    if response is not None and len(response) > 0:
         return {"code": 200, "data": {"token": token}}
     else:
         return {"code": 999, "msg": "用户名或密码错误"}
@@ -78,12 +84,6 @@ Invoke-RestMethod -Uri http://127.0.0.1:8000/api/user/signUp `
 def signUp(userName, nickName, password):
     db = Database.Database()
     db.connect()
-    #try:
-        #response = db.execute_query("select * from user where userName=%(userName)s", {"userName": userName})
-    # 如果查询到用户（SELECT 返回非空列表），则认为已存在
-    #except Exception as e:
-        #db.disconnect()
-        #return {"code": 999, "msg": "用户名已存在"}
     response = db.execute_query(
         "insert into User (userName,nickName,password,state) values (%(userName)s,%(nickName)s,%(password)s,%(state)s)",
         {"userName": userName, "nickName": nickName, "password": password, "state": "启用"}
@@ -108,10 +108,6 @@ def signUp(userName, nickName, password):
         return {"code": 999, "msg": "用户注册失败"}
     
 #@4 用户信息修改函数(老唐版)————测试成功
-""" test:
-Invoke-RestMethod -Uri 'http://127.0.0.1:8000/api/user/editInfo'  -Method POST  -Body '{"nickName":"NewNick","avatarUrl":"http://example.com/csb.png","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyTmFtZSI6ImxqeSIsInBhc3N3b3JkIjoiMTIzNDU2IiwiZXhwIjoxNzYyOTMzODIzLjcwODg3ODV9.bzDpOP5azzsaj5T61XSqYXCm3N1mEOqyvJkN-6IDgo8"}' -ContentType 'application/json' -Verbose
-"""
-#$headers = @{ "Cookie" = "token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyTmFtZSI6ImxqeSIsInBhc3N3b3JkIjoiMTIzNDU2IiwiZXhwIjoxNzYyODU0Njk2LjUwOTY1NX0.H7AchVyuGZCYi6oRiPQx7QHA6uO7irJKegjsXEhkVI0" }; Invoke-RestMethod -Uri http://127.0.0.1:8000/api/user/editInfo -Method Post -Body '{"nickName":"NewNick","avatarUrl":"http://example.com/avatar.png"}' -Headers $headers -ContentType 'application/json' -Verbose
 def editInfo(nickName, avatar, token):
     db = Database.Database()
     response = {}
@@ -123,15 +119,20 @@ def editInfo(nickName, avatar, token):
         payload = jwt.decode(token, secret_key, algorithms=[algorithm])
         userName = payload.get("userName")
         password = payload.get("password")
+        db.connect()
         if avatar:
             saveUrl = os.path.join(IMGREPO_DIR, f"{userName}_avatar.png")
             avatar.save(saveUrl)
             avatarUrl = f"/imgRepo/{userName}_avatar.png"
-        db.connect()
-        response = db.execute_query(
-            "update User set nickName = %(nickName)s, avatarUrl = %(avatarUrl)s where userName = %(userName)s",
-            {"nickName": nickName, "avatarUrl": avatarUrl, "userName": userName}
-        )
+            response = db.execute_query(
+                "update User set nickName = %(nickName)s, avatarUrl = %(avatarUrl)s where userName = %(userName)s",
+                {"nickName": nickName, "avatarUrl": avatarUrl, "userName": userName}
+            )
+        else:
+            response = db.execute_query(
+                "update User set nickName = %(nickName)s where userName = %(userName)s",
+                {"nickName": nickName, "userName": userName}
+            )
         db.disconnect()
     #若token出现问题
     except jwt.ExpiredSignatureError:
@@ -158,17 +159,13 @@ def editInfo(nickName, avatar, token):
         return {"code": 200,"data":{"token":new_token}}
     else:
         return {"code":999, "msg":"用户信息修改失败"}
-    
-""" test:
-Invoke-RestMethod -Uri http://127.0.0.1:8000/api/user/editPassword -Method Post -Body '{"password":"123456","newPassword":"123456","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyTmFtZSI6ImxqeSIsInBhc3N3b3JkIjoiMTIzNDU2IiwiZXhwIjoxNzYyOTM1NzM4LjY5ODMyNzN9._GB-Eqn8BBpESAnqgz-LqbUYGV3aBbalAf91aYPHYs8"}' -ContentType "application/json"
-"""
 
 #@5 用户密码修改函数(老唐版)————测试成功
 def editPassword(password, newPassword, token):
     db=Database.Database()
     response={}
     userName=""
-    password=""
+    userPassword=""
     try:
         token_check = checkToken(token)
         if token_check.get("code") != 200:
@@ -176,8 +173,8 @@ def editPassword(password, newPassword, token):
         # 解码 token 获取用户名
         payload = jwt.decode(token, secret_key, algorithms=[algorithm])
         userName = payload.get("userName")
-        userpassword = payload.get("password")
-        if password == userpassword:
+        userPassword = payload.get("password")
+        if password == userPassword:
             db.connect()
             #使用数据库进行更新
             response = db.execute_query("update User set password=%(newPassword)s where userName=%(userName)s",{"newPassword": newPassword, "userName": userName})
@@ -197,7 +194,7 @@ def editPassword(password, newPassword, token):
     if response is not None:
         new_payload = {
             "userName": userName,
-            "password": password,
+            "password": newPassword,
             "exp": time.time() + 3600
         }
         new_token = jwt.encode(
@@ -208,10 +205,6 @@ def editPassword(password, newPassword, token):
         return {"code": 200,"data":{"token":new_token}}
     else:
         return {"code":999, "msg":"用户密码修改失败"}
-    
-""" test:
-Invoke-RestMethod -Uri http://127.0.0.1:8000/api/user/getInfo -Method Post -Body '{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyTmFtZSI6ImxqeSIsInBhc3N3b3JkIjoiMTIzNDU2IiwiZXhwIjoxNzYyOTQxNjMyLjkwMDIwMTN9.lxxo4QIhmitZg8WkcVD42TO90Q9nY3MttqSYRbCOJwI"}' -ContentType "application/json"
-"""
 
 #@6 用户信息获取函数(老唐版)————测试成功
 def getInfo(token):
@@ -262,10 +255,6 @@ def getInfo(token):
         return {"code":200, "data": dataList}
     else:
         return {"code":999, "msg":"用户信息获取失败"}
-
-""" test:
-Invoke-RestMethod -Uri http://127.0.0.1:8000/api/user/getCommentList -Method Post -Body '{"numPerPage":"2","pageIndex":"1","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyTmFtZSI6ImxqeSIsInBhc3N3b3JkIjoiMTIzNDU2IiwiZXhwIjoxNzYyOTUzODg3LjgzMzU1NjJ9.xtvEJKcnm4xm3EtxIF660pSq0QH2zGoQHKBr_4_7jRc"}' -ContentType "application/json"
-"""
         
 #@7 评论获取函数(老唐版)————测试成功
 def getCommentList(numPerPage, pageIndex, token):
@@ -330,7 +319,7 @@ def getCommentList(numPerPage, pageIndex, token):
                         "stallName": row.get("stall_name"),
                         "canteen": row.get("canteen"),
                         "dateTime": row.get("dateTime"),
-                        "rating": float(row.get("rating", 0)),
+                        "rating": int(row.get("rating", 0)),
                         "like": row.get("recommendCount", 0),
                         "content": row.get("content", ""),
                         "picture1Url": row.get("picture1Url"),
@@ -344,7 +333,7 @@ def getCommentList(numPerPage, pageIndex, token):
                         "stallName": row[1] if len(row) > 1 else "",
                         "canteen": row[2] if len(row) > 2 else "",
                         "dateTime": row[3] if len(row) > 3 else None,
-                        "rating": float(row[4]) if len(row) > 4 else 0.0,
+                        "rating": int(row[4]) if len(row) > 4 else 0,
                         "like": row[5] if len(row) > 5 else 0,
                         "content": row[6] if len(row) > 6 else "",
                         "picture1Url": row[7] if len(row) > 7 else None,
@@ -355,10 +344,6 @@ def getCommentList(numPerPage, pageIndex, token):
         return {"code":200, "data": {"comments":comments, "totalPageNum":totalPageNum, "pageIndex":pageIndex, "token": token}}
     else:
         return {"code":999, "msg":"用户评论获取失败"}
-
-""" test:
-Invoke-RestMethod -Uri http://127.0.0.1:8000/api/user/deleteComment -Method Post -Body '{"commentID":"1","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyTmFtZSI6ImxqeSIsInBhc3N3b3JkIjoiMTIzNDU2IiwiZXhwIjoxNzYyOTk3ODgzLjA4NDg1MTV9.wPHIG3SSa1LTRBZN_5m9y-iEWa_2dqZeyLyJiZcrbkc"}' -ContentType "application/json"
-"""
 
 #@8 删除评论函数(老唐版)————测试成功
 def deleteComment(commentID, token):

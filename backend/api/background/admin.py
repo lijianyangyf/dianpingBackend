@@ -51,7 +51,7 @@ def login(ID,password):
         secret_key,
         algorithm=algorithm
     )
-    if response is not None:
+    if response is not None and len(response) > 0:
         return {"code": 200, "data": {"token": token}}
     else:
         return {"code": 999, "msg": "用户不存在|密码错误"}
@@ -67,15 +67,20 @@ def editInfo(name,avatar,token):
         payload = jwt.decode(token, secret_key, algorithms=[algorithm])
         ID = payload.get("ID")
         password = payload.get("password")
+        db.connect()
         if avatar:
             saveUrl = os.path.join(IMGREPO_DIR, f"{ID}_avatar.png")
             avatar.save(saveUrl)
             avatarUrl = f"/imgRepo/{ID}_avatar.png"
-        db.connect()
-        response = db.execute_query(
-            "update Admin set name = %(name)s, avatarUrl = %(avatarUrl)s where ID = %(ID)s",
-            {"name": name, "avatarUrl": avatarUrl, "ID": ID}
-        )
+            response = db.execute_query(
+                "update Admin set name = %(name)s, avatarUrl = %(avatarUrl)s where ID = %(ID)s",
+                {"name": name, "avatarUrl": avatarUrl, "ID": ID}
+            )
+        else:
+            response = db.execute_query(
+                "update Admin set name = %(name)s where ID = %(ID)s",
+                {"name": name, "ID": ID}
+            )
         db.disconnect()
     except jwt.ExpiredSignatureError:
         return {"code": 999, "msg": "Token 已过期"}

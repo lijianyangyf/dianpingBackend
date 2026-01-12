@@ -14,6 +14,7 @@ from flask import Flask, send_from_directory, jsonify, request, g
 from dotenv import load_dotenv
 from api import user
 from api import food
+from api import home
 from api.background import admin
 from api.background import user as bg_user
 from api.background import food as bg_food
@@ -189,7 +190,12 @@ def admin_api(json_fields=None, query_fields=None):
 def health():
     """简单存活探针，便于容器/负载均衡检查。"""
     return jsonify(code=200, msg="ok")
-
+# === 主页档口推荐 === (0)
+@app.get("/api/home/getRecommendedStall")
+def api_home_getRecommendedStall():
+    """主页档口推荐 API 接口"""
+    response_data = home.getRecommendedStall()
+    return _build_response(response_data)
 # === 验证 ===（1）
 @app.get("/api/checkToken")
 @require_token(error_code=998)

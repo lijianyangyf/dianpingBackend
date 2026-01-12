@@ -16,6 +16,7 @@ webProject/
 ├── backend/         # Flask后端代码
 │   ├── Database.py # 数据库连接池和分布式锁
 │   ├── portal.py   # 主入口、路由处理及静态资源托管
+│   ├── patched_portal.py   # 低侵入日志系统入口
 │   ├── scheduler.py # 定时任务调度器（评分/招牌菜更新）
 │   └── api/        # 业务逻辑模块
 │       ├── food.py  # 前台食品相关API
@@ -78,6 +79,8 @@ pip install -r doc/requirements.txt
 ```bash
 # 启动Flask应用（会自动启动定时任务调度器）
 python backend/portal.py
+或
+python backend/patched_portal.py
 ```
 
 4. 启动前端应用

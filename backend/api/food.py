@@ -475,10 +475,11 @@ def createStallComment(stallID, rating, content, picture1, picture2, picture3, t
         payload = jwt.decode(token, secret_key, algorithms=[algorithm])
         userName = payload.get("userName")
         password = payload.get("password")
+        uuid64=str(time.localtime())
         if picture1:
-            saveUrl = os.path.join(IMGREPO_DIR, f"{userName}_picture1.png")
+            saveUrl = os.path.join(IMGREPO_DIR, f"{userName}_{uuid64}_picture1.png")
             picture1.save(saveUrl)
-            picture1Url = f"/imgRepo/{userName}_picture1.png"
+            picture1Url = f"/imgRepo/{userName}_{uuid64}_picture1.png"
         else:
             picture1Url = ""
         if picture2:

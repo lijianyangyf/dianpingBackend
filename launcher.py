@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-"""
-launcher.py - 校园餐饮管理系统启动器 (Campus Dining System Launcher)
-功能：环境检查、依赖验证、服务管理、Pygame状态监控面板
-Author: AI Assistant
-Date: 2025-12-21
-"""
-
 #========== 导入模块 ==========
 import os          # 文件和目录操作
 import sys         # 系统相关功能，如退出程序
